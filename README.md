@@ -147,7 +147,12 @@ fora do chat (aqui, cada deploy/teste na sua org). Este repositorio ja vem com u
       "Bash(sf project deploy start *)",
       "Bash(sf apex run test *)",
       "Bash(sf org display*)",
-      "Bash(sf config get*)"
+      "Bash(sf config get*)",
+      "PowerShell(node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs *)",
+      "PowerShell(sf project deploy start *)",
+      "PowerShell(sf apex run test *)",
+      "PowerShell(sf org display*)",
+      "PowerShell(sf config get*)"
     ]
   }
 }
@@ -157,6 +162,15 @@ Com isso, o loop roda do inicio ao fim **sem interromper a cada iteracao** — m
 "raio de acao" livre fica limitado so a esses comandos. Qualquer coisa fora do
 escopo da skill (`git push --force`, `rm -rf`, `sf org delete`, editar arquivos
 fora do projeto etc.) continua pedindo aprovacao normalmente, como sempre.
+
+> ⚠️ **No Windows, `Bash` e `PowerShell` sao categorias de permissao
+> DIFERENTES.** Se voce nao tem o Git Bash instalado, o Claude Code usa o
+> PowerShell como shell padrao — e regras `Bash(...)` **nao** cobrem comandos
+> rodados por ele (por isso o arquivo acima ja inclui as duas versoes, `Bash(...)`
+> e `PowerShell(...)`, para os mesmos comandos). Se mesmo assim continuar pedindo
+> aprovacao a cada comando, confirme qual shell esta ativo com `claude --debug`
+> (procure por "Using shell: ..." no log) — ou instale o Git Bash e passe a usar
+> as regras `Bash(...)`.
 
 - Este arquivo e **versionado** (vale para quem clonar o repositorio). Se preferir
   algo so seu, mova o mesmo conteudo para `.claude/settings.local.json` (nao
