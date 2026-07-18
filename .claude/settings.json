@@ -5,7 +5,12 @@
       "Bash(sf project deploy start *)",
       "Bash(sf apex run test *)",
       "Bash(sf org display*)",
-      "Bash(sf config get*)"
+      "Bash(sf config get*)",
+      "PowerShell(node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs *)",
+      "PowerShell(sf project deploy start *)",
+      "PowerShell(sf apex run test *)",
+      "PowerShell(sf org display*)",
+      "PowerShell(sf config get*)"
     ]
   }
 }
