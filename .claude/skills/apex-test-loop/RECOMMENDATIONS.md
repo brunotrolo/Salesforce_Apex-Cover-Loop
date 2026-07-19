@@ -370,4 +370,38 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   Nota tecnica preservada: excecao no meio do metodo corta cobertura das linhas
   seguintes — dado real segue sendo a melhor tatica DE COBERTURA mesmo no MVP.
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0028, R-0029... -->
+### R-0028 — [campo] Caminho do state file divergia entre ferramentas (Claude Code × OpenCode)
+- **Status:** ✅ Aplicada (PR desta sessao)
+- **Data:** 2026-07-19
+- **Gatilho:** O usuario rodou a skill no Claude Code (state em
+  `.claude/apex-test-loop/state/`) e no OpenCode (state em
+  `.opencode/skills/apex-test-loop/state/`) — dois silos, progresso nao compartilhado
+  ao trocar de ferramenta.
+- **Problema:** O caminho do checkpoint estava atrelado a pasta da ferramenta
+  (`.claude`/`.opencode`), entao o mesmo projeto tinha estados diferentes conforme
+  quem rodava; a retomada de um nao enxergava o outro.
+- **Melhoria:** Padronizado um caminho **neutro** na raiz do projeto —
+  `<projeto>/.apex-test-loop/state/<Classe>.md` (fora de `.claude`/`.opencode`).
+  `run-state.md` e Passo 0 do SKILL.md atualizados, com instrucao de MIGRAR estado
+  antigo achado sob `.claude`/`.opencode`. Nota adicional: os SCRIPTS (dentro da
+  skill) seguem o prefixo da ferramenta; so o STATE e neutro/compartilhado.
+
+### R-0029 — Centralizar padroes agnosticos em docs/ + separar os dois ledgers
+- **Status:** ✅ Aplicada (PR desta sessao)
+- **Data:** 2026-07-19
+- **Gatilho:** Um run em OpenCode gerou um `RECOMMENDATIONS.md` ad-hoc, especifico de
+  UMA classe (10 licoes com nomes de metodo/mock reais), salvo localmente e perdido
+  entre sessoes. Alem disso, a sessao alucinou um `apex-retrospective.mjs` inexistente.
+- **Problema:** (a) Nao havia lugar versionado e AGNOSTICO para padroes de teste
+  reutilizaveis; (b) confundia-se aprendizado da skill (R-XXXX) com padrao de teste
+  (P-XXXX); (c) a retrospectiva parecia exigir um script.
+- **Melhoria:** Novo `docs/apex-test-loop-recommendations.md` (raiz, versionado) para
+  padroes AGNOSTICOS `P-XXXX` + `references/contribution-guidelines.md` (como
+  contribuir sem citar classe). SKILL.md: tabela de destino do aprendizado (friccao
+  da skill → RECOMMENDATIONS.md; padrao reutilizavel → docs/), e nota de que a
+  retrospectiva e reflexao (sem script). Adicionado tambem `FeatureManagement`/
+  custom permission como categoria NOMEADA de linha inalcancavel em
+  `runtime-blockers.md`, e `--ignore-conflicts` (com ressalva) nos erros comuns de
+  `sf-cli-and-coverage.md`.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0030, R-0031... -->

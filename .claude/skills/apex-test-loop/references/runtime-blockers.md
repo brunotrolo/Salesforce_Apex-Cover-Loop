@@ -84,6 +84,25 @@ Ordem de ataque (do mais legitimo ao ultimo recurso):
 3. **Se o codigo de producao deveria checar `isEmpty()` e nao checa**: registre como
    **achado de producao** (robustez), sem tocar na producao.
 
+### 4) Linhas atras de `FeatureManagement`/permissao (inalcancaveis por design)
+
+Padrao comum e recorrente (visto em campo): ramos controlados por
+`FeatureManagement.checkPermission('...')`, custom permissions, ou checagens de
+perfil/licenca que **retornam um valor fixo em contexto de teste** e nao podem ser
+setados como `true` via Apex de teste. Sao um numero PEQUENO de linhas bem
+localizadas (tipicamente 1-5), quase sempre um `if (FeatureManagement...)`.
+
+- **Reconheca cedo e nao queime iteracoes:** se a `uncoveredLine` cai exatamente
+  numa checagem de `FeatureManagement`/custom permission, **e inalcancavel neste
+  ambiente** — nao tente "mais um teste". Marque e siga.
+- **Documente** na secao "Limitacoes de cobertura" do encerramento e no checkpoint,
+  com o motivo ("linha N: FeatureManagement.checkPermission — nao setavel em teste").
+- **Nao refatore a producao** so para cobrir (ex.: extrair um wrapper `@TestVisible`)
+  — isso e mudanca de producao, fora do escopo desta skill; no maximo vira sugestao
+  de **achado de producao** para o humano decidir com a `platform-apex-generate`.
+- **Efeito na meta:** poucas linhas assim derrubam o teto de 100% para ~99% de forma
+  legitima — e exatamente o tipo de teto honesto que o MVP aceita.
+
 ## Regra do platô (sinal de cobertura de fachada)
 
 Se a cobertura **nao subir por 2 iteracoes seguidas** enquanto o numero de testes

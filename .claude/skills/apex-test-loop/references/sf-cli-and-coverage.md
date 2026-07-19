@@ -125,3 +125,15 @@ Como ler:
 - **`--synchronous` reclama de multiplas classes** → rode uma classe de teste por vez.
 - **Deploy falha em campos/objetos custom** → o metadado dependente nao esta na org;
   garanta que a org (scratch/sandbox) tem o mesmo schema do projeto.
+- **Deploy falha por conflito de source tracking** (`The following components have
+  changed... conflicts`) → em orgs com tracking (scratch/dev), metadados alterados
+  fora do CLI ou por outro usuario geram conflito. Como voce so deploya a classe de
+  TESTE (arquivo que voce mesmo controla), e seguro adicionar `--ignore-conflicts`:
+  ```bash
+  sf project deploy start --metadata ApexClass:MinhaClasseTest \
+    --ignore-conflicts --json --target-org minhaOrg
+  ```
+  ⚠️ **Ressalva:** `--ignore-conflicts` mascara divergencias reais — use APENAS para o
+  deploy do teste (nunca com `ApexClass:MinhaClasse` de producao no mesmo comando).
+  Se o conflito for na propria classe de producao, PARE: e sinal de que a org tem uma
+  versao diferente do repo — decisao do humano, nao ignore.

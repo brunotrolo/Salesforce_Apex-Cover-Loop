@@ -7,15 +7,31 @@ compactacao de contexto, **sem recomecar do zero**.
 > Nao confundir com o `RECOMMENDATIONS.md` (memoria LONGA: o que a skill aprendeu
 > entre runs). Este arquivo e a memoria de **estado de UM run** sobre UMA classe.
 
-## Onde fica
+## Onde fica (caminho NEUTRO de ferramenta — padrao unico)
 
 ```
-<projeto>/.claude/apex-test-loop/state/<Classe>.md
+<projeto>/.apex-test-loop/state/<Classe>.md
 ```
 
+- **Caminho neutro por design (aprendido em campo).** O mesmo projeto pode ser rodado
+  por ferramentas diferentes (Claude Code usa `.claude/`, OpenCode usa `.opencode/`).
+  Num run real, o state acabou salvo em `.claude/apex-test-loop/state/` por uma
+  ferramenta e em `.opencode/skills/apex-test-loop/state/` por outra — dois silos,
+  progresso perdido na troca. Por isso o estado vive em `<projeto>/.apex-test-loop/`
+  (na RAIZ do projeto, **fora** de `.claude`/`.opencode`): qualquer ferramenta que
+  rode a skill le e escreve no MESMO lugar.
+- **Migracao:** se no Passo 0 voce encontrar estado antigo em
+  `.claude/apex-test-loop/state/` ou `.opencode/**/state/`, **mova** para o caminho
+  neutro (`git mv` se versionado) e siga a partir dele — nunca mantenha os dois.
 - Fora da pasta da skill (a skill pode ser atualizada/substituida; o estado e do projeto).
 - Escrever `.md` e liberado pelo guard (so `.cls`/`.trigger` de producao e protegido).
 - O arquivo e legivel por humanos — o usuario pode abrir e entender o progresso.
+
+> Nota sobre os SCRIPTS da skill (`apex-coverage.mjs`, `guard.mjs`): esses vivem
+> DENTRO da pasta da skill, entao o caminho deles acompanha onde a skill esta
+> instalada — `.claude/skills/apex-test-loop/scripts/...` no Claude Code,
+> `.opencode/skills/apex-test-loop/scripts/...` no OpenCode. Use o prefixo da
+> ferramenta em que voce esta rodando. So o STATE (acima) e neutro e compartilhado.
 
 ### UM arquivo canonico por classe — copias sao PROIBIDAS (aprendido em campo)
 
