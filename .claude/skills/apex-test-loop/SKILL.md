@@ -374,6 +374,14 @@ conceitos; mostre o progresso (`72% -> 88% -> 99%`); as Travas continuam valendo
 
 ## Referencias
 
+**Memoria e autoaprendizado (FUNDAMENTAL — consulte primeiro antes de cada run):**
+- `docs/apex-test-loop-recommendations.md` — padroes agnósticos de teste descobertos
+  em campo (FeatureManagement, mocks, transacao grouping, meta realista, state file
+  etc) + recomendacoes para a propria skill (R-0001 a R-0027). **Leia aqui quando:**
+  encontrar padroes repetidos entre classes diferentes, decidir sobre arquitetura de
+  mocks, questionar se a meta e realista, ou contribuir uma licao nova (ver secao 4
+  do arquivo para contribuir).
+
 **Nossas (unicas desta camada):**
 - `references/parallel-methods.md` — decomposicao por metodo (fan-out) para classes
   grandes: quando usar, os 3 riscos de concorrencia e a estrutura segura (autoria
@@ -387,7 +395,8 @@ conceitos; mostre o progresso (`72% -> 88% -> 99%`); as Travas continuam valendo
 - `references/scaffolding-dependencies.md` — orquestracao do scaffold dev/treino.
 - `references/sf-cli-and-coverage.md` — contrato do `apex-coverage.mjs` e comandos
   `sf` crus de fallback.
-- `RECOMMENDATIONS.md` — livro-razao de autoaprendizado (memoria LONGA, entre runs).
+- `RECOMMENDATIONS.md` (local) — historico de evolucao desta skill (R-0001-R-0027,
+  aplicadas em PRs passadas). Consulte para compreender decisoes passadas.
 
 **Craft (skills oficiais importadas — veja a tabela de Delegacao):**
 platform-apex-test-generate, platform-apex-test-run, platform-data-manage,
