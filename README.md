@@ -1,11 +1,17 @@
 # Salesforce-LoopAgentApex
 
-Skill de **loop agente** para o Claude Code que gera e melhora **classes de teste
-Apex** de forma auto-corretiva, ate atingir cobertura **real** e alta (meta padrao
-`>= 99%`) para uma classe de producao especifica.
+Arquitetura **hibrida** para o Claude Code criar **classes de teste Apex** com
+cobertura **real** e alta (meta padrao `>= 99%`):
+
+- **Craft (o "como" fazer)** vem das **skills oficiais da Salesforce** (`forcedotcom/
+  sf-skills`, Apache-2.0) importadas neste projeto — mocks, asserts, data factory,
+  bulk, async, DML, objetos/campos, debug de logs.
+- **Orquestracao (o nosso valor)** e a skill **`apex-test-loop`**: o **agent loop** de
+  cobertura, as **travas de seguranca**, o **modo guiado em portugues** e o **modo
+  scaffold** (dev/treino).
 
 Voce informa uma classe (`/apex-test-loop AccountService`), e o Claude Code entra
-num ciclo fechado:
+num ciclo fechado, **delegando o craft** as skills oficiais:
 
 ```
 escrever teste  ->  deploy (sf)  ->  rodar teste + cobertura  ->  ler linhas nao cobertas
@@ -18,24 +24,39 @@ ou quando bate uma condicao de parada segura (e ai gera um relatorio para o huma
 
 ## O que faz diferente
 
+- **Craft oficial + orquestracao nossa.** Nao reinventamos o "como escrever um bom
+  teste" — isso vem das skills oficiais mantidas pela Salesforce. A nossa camada e o
+  loop que **dirige** o processo ate a meta, com seguranca e UX.
 - **Cobertura por cenario real, nao por numero.** Regras anti-cheat proibem inflar
-  a porcentagem (mexer na formatacao da classe de producao, testes sem assert etc.).
+  a porcentagem (mexer na classe de producao, testes sem assert, asserts de range).
 - **Sinal deterministico.** Um script auxiliar (`scripts/apex-coverage.mjs`) roda o
   teste, faz o parse do JSON do `sf` e devolve **exatamente as linhas nao cobertas**,
   em vez de o agente adivinhar.
-- **Seguranca contra acoes destrutivas.** A skill so CRIA/edita a classe de TESTE.
-  Apagar, mover ou sobrescrever a classe de producao (no disco ou na org), rodar
-  deploy destrutivo ou excluir org/registros e **proibido em tres camadas**:
-  instrucoes no `SKILL.md`, regras `deny` e um hook `PreToolUse` que inspeciona
-  cada comando (veja "Travas de seguranca" abaixo).
-- **`catch`/DML tratado na ordem certa.** Primeiro forcar falha real com dado
-  invalido / `System.runAs`; depois Stub API / injecao de dependencia; e so como
-  ultimo recurso um hook `@TestVisible` na classe de producao — sempre sinalizado
-  para revisao humana, nunca commitado silenciosamente.
-- **Callouts e assincrono sem sustos.** Classes com HTTP/SOAP ou
-  `@future`/Queueable/Batch/Schedulable sao detectadas ANTES de escrever o teste,
-  aplicando `Test.setMock` e os padroes de `startTest/stopTest` corretos — em vez
-  de queimar iteracoes com falhas de plataforma.
+- **Seguranca contra acoes destrutivas (3 camadas).** A `apex-test-loop` so cria/edita
+  a classe de TESTE. Apagar/mover/deletar producao, org ou registros e **bloqueio duro**
+  (`deny` + hook); **sobrescrever** producao existente **pede aprovacao** (`ask`) — assim
+  a `platform-apex-generate` refatora producao com o seu ok, e nunca ha sobrescrita
+  **silenciosa** (o bug que originou tudo isso). Veja "Travas de seguranca".
+
+## Skills oficiais importadas (craft)
+
+Importamos **na integra** 7 skills do `forcedotcom/sf-skills` (Apache-2.0, snapshot
+`v1.31.0`) para `.claude/skills/`. Elas fornecem o craft; a nossa `apex-test-loop`
+delega a elas. Detalhes/atribuicao em `.claude/skills/VENDOR-ATTRIBUTION.md`.
+
+| Skill oficial | Para que a nossa loop a usa |
+|---|---|
+| `platform-apex-test-generate` | escrever/melhorar a classe de teste (mocks, asserts, bulk 251+, async, DML) |
+| `platform-apex-test-run` | rodar teste, analisar cobertura, padroes de fix |
+| `platform-data-manage` | criar/seedar dados de teste (TestDataFactory, bulk) |
+| `platform-apex-logs-debug` | diagnosticar falha por log / governor limit |
+| `platform-apex-generate` | autorar/refatorar producao (fora do loop, com aprovacao) |
+| `platform-custom-object-generate` | criar objeto `__c` faltante (modo scaffold) |
+| `platform-custom-field-generate` | criar campo `__c`/`__mdt` faltante (modo scaffold) |
+
+Cada uma tem os proprios gatilhos (TRIGGER / DO NOT TRIGGER), entao **coexistem sem
+colisao**: a `apex-test-loop` dispara no "cobrir a classe X ate ~99% em loop"; as
+oficiais, em pedidos diretos ("escreva um teste", "rode os testes", "crie um objeto").
 
 ## Pre-requisitos (na maquina onde o loop roda)
 
@@ -183,15 +204,17 @@ org/registros e bloqueado em **tres camadas independentes**, ja incluidas no
    qualquer acao.
 2. **Regras `permissions.deny`** — bloqueio duro (sem aprovacao possivel) de
    `sf project delete`, `sf org delete` e `sf data delete` (Bash e PowerShell).
-3. **Hook `PreToolUse` (`scripts/guard.mjs`)** — inspeciona cada acao e nega tambem
-   o que as regras de prefixo nao alcancam:
-   - **comandos** destrutivos (deploy com `--pre`/`--post-destructive-changes`,
-     `rm`/`del`/`Remove-Item` de `.cls`/`.cls-meta.xml`);
-   - **escrita de arquivo** (`Write`/`Edit`) que **sobrescreve** uma classe/trigger de
-     **PRODUCAO ja existente** — foi o vetor do bug real. O guard bloqueia editar/
-     sobrescrever qualquer `.cls`/`.trigger` que **ja existe** e nao e teste (inclui
-     a classe sob teste). **Criar arquivo NOVO e liberado** (nunca destroi nada) —
-     e o que permite o modo scaffold criar stubs de dependencias faltantes.
+3. **Hook `PreToolUse` (`scripts/guard.mjs`)** — inspeciona cada acao com **duas
+   respostas**:
+   - **`deny` (bloqueio duro)** para **comandos** destrutivos: `sf project/org/data
+     delete`, deploy com `--pre`/`--post-destructive-changes`, e `rm`/`del`/`Remove-Item`
+     de `.cls`/`.cls-meta.xml`. Nao ha aprovacao possivel.
+   - **`ask` (pede aprovacao)** quando um `Write`/`Edit` **sobrescreve** um `.cls`/
+     `.trigger` de **PRODUCAO ja existente** (inclui a classe sob teste) — foi o vetor
+     do bug. A `apex-test-loop` nunca faz isso; mas a `platform-apex-generate` pode
+     refatorar producao **com o seu ok**, e nunca ha sobrescrita **silenciosa**.
+     **Criar arquivo NOVO e liberado** (nunca destroi nada) — e o que permite o modo
+     scaffold criar stubs de dependencias faltantes.
 
 Se voce ja tem `.claude/settings.json` no seu projeto, **mescle** o bloco `deny` e o
 `hooks.PreToolUse` (nao substitua o arquivo). O guard usa o Node, ja exigido pela
@@ -244,23 +267,31 @@ Na pratica:
 ## Estrutura
 
 ```
-.claude/skills/apex-test-loop/
-  SKILL.md                          # o loop, as regras de ouro e a condicao de parada
-  RECOMMENDATIONS.md                # livro-razao de melhorias da propria skill (autoaprendizado)
-  scripts/
-    apex-coverage.mjs               # deploy + run test + parse -> JSON com linhas nao cobertas
-    guard.mjs                       # hook PreToolUse: bloqueia comandos destrutivos + escrita na producao
-  references/
-    guided-mode.md                  # roteiro do modo guiado (passo a passo para leigos)
-    sf-cli-and-coverage.md          # comandos sf, flags e formato do JSON de cobertura
-    testing-dml-and-exceptions.md   # como cobrir catch/DML na ordem certa
-    callouts-and-async.md           # Test.setMock (HTTP/SOAP) e @future/Queueable/Batch/Schedulable
-    scaffolding-dependencies.md     # modo dev: criar o minimo de dependencias faltantes (__c/__mdt/classes)
-    quality-checklist.md            # matriz de cenarios, exigencia de asserts, anti-patterns
-    templates/
-      ExampleTest.cls               # esqueleto de classe de teste
-      ExampleTest.cls-meta.xml      # metadata da classe de teste
+.claude/skills/
+  apex-test-loop/                   # A NOSSA skill (orquestracao)
+    SKILL.md                        # o loop, delegacao, regras de ouro, parada
+    RECOMMENDATIONS.md              # livro-razao de autoaprendizado
+    scripts/
+      apex-coverage.mjs             # deploy + run test + parse -> JSON com linhas nao cobertas
+      guard.mjs                     # hook PreToolUse: deny destrutivo / ask sobrescrita de producao
+    references/
+      guided-mode.md                # roteiro do modo guiado (para leigos, PT)
+      scaffolding-dependencies.md   # orquestracao do scaffold dev (__c/__mdt/classes)
+      sf-cli-and-coverage.md        # contrato do apex-coverage.mjs + comandos sf de fallback
+  platform-apex-test-generate/      # \
+  platform-apex-test-run/           #  |
+  platform-apex-generate/           #  |  7 skills OFICIAIS importadas (craft),
+  platform-apex-logs-debug/         #  |  snapshot Apache-2.0 do forcedotcom/sf-skills
+  platform-data-manage/             #  |
+  platform-custom-object-generate/  #  |
+  platform-custom-field-generate/   # /
+  VENDOR-ATTRIBUTION.md             # de onde vieram as oficiais + licenca
+  VENDOR-sf-skills-LICENSE-Apache-2.0.txt
 ```
+
+> O craft (mocks, asserts, data factory, bulk, async, DML) agora vive nas skills
+> oficiais — por isso a nossa `apex-test-loop` ficou enxuta (so o loop + seguranca +
+> guiado + scaffold).
 
 ## Autoaprendizado (a skill sugere melhorias a si mesma)
 

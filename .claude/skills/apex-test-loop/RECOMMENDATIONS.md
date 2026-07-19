@@ -112,4 +112,37 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   (hook roda antes do allow). Sem prompts no trabalho normal; destrutivo segue
   bloqueado.
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0009, R-0010... -->
+### R-0009 — Arquitetura hibrida: importar skills oficiais + enxugar a nossa
+- **Status:** ✅ Aplicada (PR #12)
+- **Data:** 2026-07-19
+- **Gatilho:** Analise do `forcedotcom/sf-skills` (Apache-2.0) mostrou que as skills
+  Apex deles ja fazem o *craft* de teste; manter o nosso duplicado era redundante.
+- **Problema:** A nossa skill reimplementava craft (mocks, asserts, async, DML) que a
+  Salesforce ja mantem melhor; e 3 skills de teste sobrepostas colidiriam.
+- **Melhoria:** Importadas 7 oficiais na integra (snapshot v1.31.0) para
+  `.claude/skills/` (craft). A `apex-test-loop` virou **orquestrador** enxuto (loop +
+  seguranca + guiado PT + scaffold + ledger) que **delega** o craft, com blocos
+  TRIGGER/DO NOT TRIGGER para nao colidir. Removidas as referencias de craft duplicadas
+  (callouts-and-async, testing-dml-and-exceptions, quality-checklist, templates).
+
+### R-0010 — Guard: sobrescrita de producao vira `ask` (nao mais `deny` duro)
+- **Status:** ✅ Aplicada (PR #12)
+- **Data:** 2026-07-19
+- **Gatilho:** Importar `platform-apex-generate` (autoria de producao) conflitava com o
+  guard, que bloqueava DURO qualquer sobrescrita de `.cls` de producao.
+- **Problema:** Bloqueio duro impediria a skill oficial de refatorar producao.
+- **Melhoria:** `classifyWrite` passa a devolver `decision: 'ask'` para sobrescrita de
+  producao existente (era `deny`). Comandos destrutivos seguem `deny`. Assim o generate
+  funciona com aprovacao humana e nunca ha sobrescrita silenciosa (o bug original).
+  Testado: deny p/ destrutivo, ask p/ overwrite, novo/teste liberados.
+
+### R-0011 — Adaptar boas regras deles ao anti-cheat (bulk 251+, valor exato)
+- **Status:** ✅ Aplicada (PR #12)
+- **Data:** 2026-07-19
+- **Gatilho:** As skills deles trazem regras mais afiadas que as nossas.
+- **Problema:** Nosso bulk era 200 (nao cruza a fronteira de 200 da trigger) e faltava
+  a regra de assert de valor exato.
+- **Melhoria:** Regras de Ouro do SKILL.md agora exigem **bulk 251+**, **assert de valor
+  exato (nunca range)** e **1 comportamento por metodo** — alinhadas com o craft oficial.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0012, R-0013... -->
