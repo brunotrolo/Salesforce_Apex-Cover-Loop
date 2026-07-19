@@ -4,7 +4,7 @@ Registro vivo de melhorias para a **skill** e padrões descobertos em execuçõe
 
 ---
 
-## Seção 1: Recomendações para a Skill (R-0001 a R-0027)
+## Seção 1: Recomendações para a Skill (R-0001 em diante)
 
 Veja `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` (detalhado). Resumo:
 
@@ -20,6 +20,7 @@ Veja `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` (detalhado). Resumo:
 | R-0022 a R-0027 | ✅ | MVP deployable default, circuit-breaker, autonomia, benchmark | SKILL.md, runtime-blockers.md |
 | R-0028 | ✅ | Caminho neutro do state (Claude Code × OpenCode) | run-state.md, SKILL.md |
 | R-0029 | ✅ | Centralizar padrões agnósticos + split de ledgers | references/, SKILL.md, contribution-guidelines.md |
+| R-0030 | ✅ | Endurecer guard (find/mv/rm-dir) + falso-positivo por texto assumido | guard.mjs, SKILL.md |
 
 ---
 
@@ -352,4 +353,4 @@ Quando rodar a skill `apex-test-loop` em uma classe:
 ---
 
 **Atualizado em:** 2026-07-19  
-**Versão:** 1.1 (29 recomendações da skill + 10 padrões de campo + 5 anti-padrões)
+**Versão:** 1.2 (30 recomendações da skill + 10 padrões de campo + 5 anti-padrões)

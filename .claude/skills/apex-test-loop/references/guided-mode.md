@@ -22,7 +22,8 @@ Use este roteiro quando o usuario pedir o modo guiado (`--guiado`, `--passo-a-pa
 ## Roteiro
 
 ### Etapa 1 — Boas-vindas e visao geral
-**Antes de tudo**: se existir estado salvo da classe (`.claude/apex-test-loop/state/`),
+**Antes de tudo**: se existir estado salvo da classe (caminho neutro
+`<projeto>/.apex-test-loop/state/<Classe>.md`; veja `references/run-state.md`),
 ofereca retomar: *"Encontrei um progresso salvo: cobertura em 88%, faltava cobrir a
 linha 45. Quer continuar de onde paramos?"*. Tranquilize tambem que **o progresso
 fica salvo** a cada volta ("se a gente parar aqui, eu retomo deste ponto depois").

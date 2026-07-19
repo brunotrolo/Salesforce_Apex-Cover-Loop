@@ -404,4 +404,25 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   `runtime-blockers.md`, e `--ignore-conflicts` (com ressalva) nos erros comuns de
   `sf-cli-and-coverage.md`.
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0030, R-0031... -->
+### R-0030 — Endurecer o guard (find/mv/rm-dir) e reconhecer o falso-positivo por texto
+- **Status:** ✅ Aplicada (parcial — gaps fechados; falso-positivo aceito como trade-off)
+- **Data:** 2026-07-19
+- **Gatilho:** Uma revisao tecnica da skill encontrou (a) que o `guard.mjs` NAO
+  bloqueava `find ... -delete`, `mv`/`move` de `.cls`/`.trigger`, nem `rm -rf` de um
+  DIRETORIO (`force-app`/`classes`) — apesar de o "NUNCA FACA" do SKILL.md prometer
+  bloqueio para esses casos; e (b) que o guard, por casar o TEXTO inteiro do comando,
+  bloqueia de forma dura comandos benignos que apenas *mencionam* essas strings (ex.:
+  um `grep "sf project delete"` ou um `node -e` de teste com essas strings como dado).
+- **Problema:** o SKILL.md superdimensionava a garantia ("bloqueio duro") para padroes
+  que na verdade escapavam; e a mesma regra por texto gera fricção em trabalho legitimo.
+- **Melhoria:** (1) tres regras novas em `DESTRUCTIVE_RULES` do `guard.mjs` — `find`
+  com `-delete` sobre codigo Apex; `rm/rmdir` de diretorio `force-app`/`classes`; e
+  `mv`/`move` de `.cls`/`.trigger` — validadas por 13 casos (destrutivos bloqueiam,
+  benignos passam). (2) SKILL.md reescreveu o box do guard para listar o conjunto
+  ESPECIFICO coberto e assumir a **limitacao honesta** (casamento por texto, nao
+  criptografico; falso-positivo seguro possivel). O falso-positivo em comando benigno
+  fica **aceito de proposito** (fail-safe: preferimos bloquear um comando benigno a
+  deixar passar um destrutivo). Melhoria futura possivel: inspecionar so o verbo/token
+  inicial do comando, ou rebaixar casos ambiguos de `deny` para `ask`.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0031, R-0032... -->

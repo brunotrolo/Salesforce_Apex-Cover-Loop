@@ -74,4 +74,4 @@ checkpoint qual ambiente causa divergência.
 
 **Todas as P-XXXX vivem em:** `references/apex-test-loop-recommendations.md` (versionado no git)
 
-**Histórico da skill (R-0001 a R-0027):** `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` (local)
+**Histórico da skill (R-0001 em diante):** `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` (local)

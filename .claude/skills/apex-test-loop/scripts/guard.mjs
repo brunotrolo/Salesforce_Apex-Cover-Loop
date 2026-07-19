@@ -43,6 +43,24 @@ export const DESTRUCTIVE_RULES = [
     re: /\b(rm|rmdir|rd|unlink|del|erase|remove-item|ri)\b[\s\S]*\.cls\b/,
     why: 'exclusao de arquivo .cls / .cls-meta.xml (classe Apex)',
   },
+  {
+    // find ... -delete que atinge codigo Apex (.cls/.trigger) OU o diretorio
+    // force-app/classes. Nao tem verbo "rm", entao a regra acima nao pega.
+    re: /\bfind\b(?=[\s\S]*-delete\b)(?=[\s\S]*(?:\.cls\b|\.trigger\b|force-app|[\\/]classes\b))/,
+    why: 'find ... -delete sobre codigo Apex (force-app / .cls / .trigger)',
+  },
+  {
+    // rm -rf / rmdir de um DIRETORIO de codigo-fonte (sem token .cls, a regra
+    // acima nao pega): apagar force-app/ ou .../classes destroi as classes.
+    re: /\b(rm|rmdir|rd|remove-item|ri)\b(?=[\s\S]*(?:force-app|[\\/]classes\b))/,
+    why: 'exclusao de diretorio de codigo-fonte Apex (force-app / classes)',
+  },
+  {
+    // mover/renomear .cls/.trigger (o NUNCA FACA proibe mover producao). mv/move
+    // nao apagam, mas remontam a arvore de codigo por baixo das travas.
+    re: /\b(mv|move)\b(?=[\s\S]*\.(?:cls|trigger)\b)/,
+    why: 'mover/renomear classe ou trigger Apex (.cls/.trigger)',
+  },
 ];
 
 // Classificacao de comando: texto -> { blocked, why, decision }.

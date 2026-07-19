@@ -13,8 +13,10 @@ tinha sido gerado e jogado fora. Regra:
 - **Sempre** redirecione a saida completa para arquivo, e leia o arquivo depois:
   ```bash
   node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs ... \
-    > .claude/apex-test-loop/state/cov-atual.json 2> .claude/apex-test-loop/state/cov-atual.err
+    > .apex-test-loop/state/cov-atual.json 2> .apex-test-loop/state/cov-atual.err
   ```
+  (caminho neutro `<projeto>/.apex-test-loop/state/`, fora de `.claude`/`.opencode` —
+  veja `references/run-state.md`.)
 - **Nunca** canalize por `tail`/`head`/`grep` antes de o JSON estar salvo em arquivo.
 - O arquivo de cobertura da iteracao e um ARTEFATO do run (o proximo passo depende
   dele) — trate-o como tal, nao como ruido de console.

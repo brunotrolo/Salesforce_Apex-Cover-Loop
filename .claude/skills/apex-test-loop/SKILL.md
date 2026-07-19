@@ -74,18 +74,22 @@ Como o custo esta no round-trip, as alavancas REAIS de tempo sao:
 2. **Lote maximo por deploy:** enfileire TODOS os testes que sabe escrever (corrigir
    todas as falhas + cobrir todas as linhas-alvo mapeadas) e gaste **um** deploy por
    iteracao. Meca exito em "linhas-alvo eliminadas por deploy", nao em iteracoes.
-   (Regra detalhada em "Economia de tempo" mais abaixo.)
+   (Regra detalhada em "⚡ Disciplina de execucao → Lote maximo por deploy", abaixo.)
 3. **Testes sem-DML primeiro (ate ~90% OU empacar):** priorize os cenarios que NAO
-   precisam de `insert/update/delete` — eles rodam mais rapido na org, escapam de
-   bloqueios de Flow/automacao, e cobrem a "parte barata" da classe. So depois parta
-   para os cenarios com DML (mais lentos e sujeitos a Flow/governor).
+   precisam de `insert/update/delete` — eles **escapam de bloqueios de Flow/automacao
+   e de governor no setup**, e cobrem a "parte barata" da classe rapidamente. So depois
+   parta para os cenarios com DML (mais sujeitos a Flow/governor). (Atencao: o deploy+run
+   continua igual com ou sem DML — o ganho aqui e **evitar bloqueios**, nao velocidade de
+   execucao.)
 
 **⚠️ Teto do sem-DML:** linhas de producao que so executam APOS persistencia real
-(logica pos-`insert`, SOQL de re-leitura, triggers) **nao sao alcancaveis** por teste
-sem-DML. Por isso a meta da fase sem-DML e **"~90% OU o ponto em que a cobertura
-empaca"**, o que vier primeiro — nunca insista em 90% sem-DML se as linhas restantes
-claramente exigem DML. Ao empacar, passe para os testes com DML (aplicando a ordem de
-ataque de `references/runtime-blockers.md`: satisfazer Flow → runAs → dado real).
+(logica pos-`insert`, SOQL de re-leitura, **triggers**, rollups, campos formula, `Id`
+populado) **nao sao alcancaveis** por teste sem-DML — para uma trigger handler ou
+selector/DAO o teto sem-DML pode ser bem baixo (as vezes ~0%). Por isso a meta da fase
+sem-DML e **"~90% OU o ponto em que a cobertura empaca"**, o que vier primeiro — nunca
+insista nos 90% sem-DML se as linhas restantes claramente exigem DML (nesses tipos de
+classe, va direto ao DML). Ao empacar, passe para os testes com DML (aplicando a ordem
+de ataque de `references/runtime-blockers.md`: satisfazer Flow → runAs → dado real).
 
 Isso e **ordem de trabalho** (estrategia que VOCE, agente, segue), nao uma flag do
 script. O `apex-coverage.mjs` continua so medindo cobertura de forma deterministica; a
@@ -133,11 +137,17 @@ isso e trabalho da **platform-apex-generate**, com aprovacao — nao desta.) Voc
 
 Na duvida sobre remover/mover/substituir algo de producao ou da org: **PARE e pergunte.**
 
-> Reforco fora do modelo (`.claude/settings.json`): comandos destrutivos (delete/rm/
-> deploy destrutivo) sao **bloqueados de forma dura** (`deny` + hook `guard.mjs`).
-> **Sobrescrever** um `.cls`/`.trigger` de producao **existente** agora **pede
-> aprovacao** (nao e bloqueio duro) — assim a `platform-apex-generate` pode refatorar
-> producao com o seu ok, e nunca ha sobrescrita **silenciosa** (o bug original).
+> Reforco fora do modelo (`.claude/settings.json`): o hook `guard.mjs` **bloqueia de
+> forma dura** (`deny`) um conjunto ESPECIFICO de padroes destrutivos — `sf project/
+> org/data delete`, deploy destrutivo (`destructive-changes`), `rm/del/unlink` de
+> `.cls`, `find ... -delete` e `rm -rf` sobre `force-app`/`classes`, e `mv`/`move` de
+> `.cls`/`.trigger`. **Sobrescrever** um `.cls`/`.trigger` de producao **existente**
+> **pede aprovacao** (`ask`, nao bloqueio duro) — assim a `platform-apex-generate` pode
+> refatorar producao com o seu ok, e nunca ha sobrescrita **silenciosa** (o bug
+> original). **Limitacao honesta:** o guard casa por TEXTO do comando — nao e uma
+> fronteira criptografica; wrappers/variaveis exoticos podem escapar, e ha o efeito
+> colateral de as vezes bloquear um comando benigno que apenas *menciona* essas strings
+> (falso-positivo seguro). Por isso as Travas acima (instrucoes) continuam essenciais.
 
 ## Entrada
 
@@ -428,7 +438,7 @@ conceitos; mostre o progresso (`72% -> 88% -> 99%`); as Travas continuam valendo
 **Memoria e autoaprendizado (FUNDAMENTAL — consulte primeiro antes de cada run):**
 - `references/apex-test-loop-recommendations.md` — padroes agnósticos de teste descobertos
   em campo (FeatureManagement, mocks, transacao grouping, meta realista, state file
-  etc) + recomendacoes para a propria skill (R-0001 a R-0027). **Leia aqui quando:**
+  etc) + recomendacoes para a propria skill (R-0001 em diante). **Leia aqui quando:**
   encontrar padroes repetidos entre classes diferentes, decidir sobre arquitetura de
   mocks, questionar se a meta e realista, ou contribuir uma licao nova (ver secao 4
   do arquivo para contribuir).
@@ -444,9 +454,9 @@ conceitos; mostre o progresso (`72% -> 88% -> 99%`); as Travas continuam valendo
   onde le/escreve, regras e template para retomar o loop de onde parou).
 - `references/guided-mode.md` — roteiro do modo guiado (PT, para leigos).
 - `references/scaffolding-dependencies.md` — orquestracao do scaffold dev/treino.
-- `references/sf-cli-and-coverage.md` — contrato do `apex-coverage.mjs` e comandos
-  `sf` crus de fallback.
-- `RECOMMENDATIONS.md` (local) — historico de evolucao desta skill (R-0001-R-0027,
+- `references/sf-cli-and-coverage.md` — comandos `sf` crus (deploy, run test, leitura
+  do JSON de cobertura) de fallback quando o `apex-coverage.mjs` nao puder rodar.
+- `RECOMMENDATIONS.md` (local) — historico de evolucao desta skill (R-0001 em diante,
   aplicadas em PRs passadas). Consulte para compreender decisoes passadas.
 
 **Craft (skills oficiais importadas — veja a tabela de Delegacao):**

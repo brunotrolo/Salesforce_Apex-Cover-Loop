@@ -11,7 +11,10 @@
 //
 // Uso:
 //   node apex-coverage.mjs --class MinhaClasse [--test MinhaClasseTest] \
-//        [--org alias] [--deploy] [--extra ApexClass:TestDataFactory,ApexClass:Outra]
+//        [--org alias] [--test-only | --deploy] [--extra ApexClass:TestDataFactory,...]
+//   --test-only  deploya SOMENTE a classe de teste (PADRAO recomendado do loop).
+//   --deploy     deploya producao + teste (so se a producao for nova/alterada).
+//   (sem --test-only nem --deploy: nao deploya — so mede o que JA esta na org.)
 //
 // IMPORTANTE (constraint do Salesforce): testes Apex SEMPRE rodam na ORG, nunca
 // na maquina local. Para a org executar um teste NOVO/ALTERADO, o codigo do teste
