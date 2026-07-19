@@ -22,7 +22,7 @@ mutavel nem dependem de ordem de execucao. Isso e o eixo certo para o `Workflow`
    `<Classe>Test.cls` ao mesmo tempo, e receita para sobrescrita/perda de trabalho —
    a mesma categoria de bug que o guard.mjs previne para o Write, so que agora por
    concorrencia, nao por trapaca.
-3. **As Regras de Ouro nao viajam sozinhas.** Um sub-agente de fan-out nao herda o
+3. **As Travas/regras do modo nao viajam sozinhas.** Um sub-agente de fan-out nao herda o
    contexto desta conversa/run. Se o prompt de cada agente nao incluir explicitamente
    as regras, corre-se o risco de cada um reinventar (ou nao evitar) os mesmos
    atalhos que o loop sequencial evita (mega-teste, try/catch de fachada, remover
@@ -33,7 +33,7 @@ mutavel nem dependem de ordem de execucao. Isso e o eixo certo para o `Workflow`
 ```
 Fase 1 — AUTORIA (paralelo, seguro):
   cada agente do fan-out recebe: (a) o nome do SEU metodo-alvo, (b) as linhas-alvo
-  exatas (uncoveredLines daquele metodo), (c) o texto completo das Regras de Ouro
+  exatas (uncoveredLines daquele metodo), (c) o texto completo das Travas (sempre) e das Regras de qualidade se o run estiver em `--rigoroso`
   desta skill (proibicoes nomeadas incluidas), (d) instrucao de DELEGAR o craft a
   platform-apex-test-generate, (e) instrucao de RETORNAR o codigo dos metodos de
   teste (texto), NAO escrever direto no arquivo compartilhado nem fazer deploy.

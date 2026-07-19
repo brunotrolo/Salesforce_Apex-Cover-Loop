@@ -1,7 +1,9 @@
 # Salesforce-LoopAgentApex
 
-Arquitetura **hibrida** para o Claude Code criar **classes de teste Apex** com
-cobertura **real** e alta (meta padrao `>= 99%`):
+Arquitetura **hibrida** para o Claude Code criar **classes de teste Apex** no
+**minimo viavel deployavel**: meta padrao `>= 99%` de cobertura com **todos os
+testes passando e portaveis entre ambientes** (o que a plataforma exige para
+deploy). Quer verificacao exaustiva com asserts? Peca o modo `--rigoroso`.
 
 - **Craft (o "como" fazer)** vem das **skills oficiais da Salesforce** (`forcedotcom/
   sf-skills`, Apache-2.0) importadas neste projeto — mocks, asserts, data factory,
@@ -19,16 +21,20 @@ escrever teste  ->  deploy (sf)  ->  rodar teste + cobertura  ->  ler linhas nao
       +----------------------  melhorar o cenario que falta  <--------------+
 ```
 
-O loop so termina quando a cobertura atinge a meta **com asserts significativos**,
-ou quando bate uma condicao de parada segura (e ai gera um relatorio para o humano).
+O loop so termina quando a cobertura atinge a meta **com todos os testes
+passando** (no modo `--rigoroso`, tambem com asserts significativos), ou quando bate
+uma condicao de parada segura (e ai gera um relatorio para o humano).
 
 ## O que faz diferente
 
 - **Craft oficial + orquestracao nossa.** Nao reinventamos o "como escrever um bom
   teste" — isso vem das skills oficiais mantidas pela Salesforce. A nossa camada e o
   loop que **dirige** o processo ate a meta, com seguranca e UX.
-- **Cobertura por cenario real, nao por numero.** Regras anti-cheat proibem inflar
-  a porcentagem (mexer na classe de producao, testes sem assert, asserts de range).
+- **Dois niveis de qualidade.** Padrao = **MVP deployavel** (cobertura + testes
+  passando + portabilidade; asserts so quando baratos/estaveis — menos falhas entre
+  ambientes e menos iteracoes). Opcional = **`--rigoroso`** (assert de valor exato
+  com mensagem em todo metodo). Em ambos: nunca mexer na producao, sem SeeAllData,
+  sem IDs hardcoded.
 - **Sinal deterministico.** Um script auxiliar (`scripts/apex-coverage.mjs`) roda o
   teste, faz o parse do JSON do `sf` e devolve **exatamente as linhas nao cobertas**,
   em vez de o agente adivinhar.

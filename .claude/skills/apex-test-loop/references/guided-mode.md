@@ -14,8 +14,9 @@ Use este roteiro quando o usuario pedir o modo guiado (`--guiado`, `--passo-a-pa
 - **Pausas obrigatorias** (espere um "ok" antes de continuar):
   1. antes do **primeiro deploy** (voce vai enviar codigo para a org dele);
   2. antes de **qualquer edicao na classe de producao** (explique o risco).
-- **Qualidade nao muda.** Todas as Regras de Ouro do `SKILL.md` continuam valendo:
-  asserts reais, nada de inflar cobertura. O modo guiado muda so o tom da conversa.
+- **Qualidade nao muda.** As Travas do `SKILL.md` continuam valendo (e as Regras de
+  qualidade, se `--rigoroso`): nada de inflar cobertura nem tocar producao. O modo
+  guiado muda so o tom da conversa.
 
 ## Roteiro
 
@@ -51,9 +52,9 @@ Leia a classe e explique, simples, o que ela faz e quais **situacoes** precisam 
 teste ("o caminho que da certo", "quando falta um dado", "quando da erro"). Ensine:
 
 > "**Cobertura** e a % das linhas do codigo que os testes fazem rodar. A meta e
-> **>= 99%** — mas com testes que **conferem o resultado** (isso se chama
-> *assert*), nao so 'passar o olho'. Cobertura alta sem conferir nada e falsa
-> seguranca."
+> **>= 99% com todos os testes passando** — e o que a plataforma exige para levar
+> o codigo de um ambiente a outro (deploy). Se voce quiser, tambem da para pedir o
+> modo *rigoroso*, em que cada teste confere os resultados em detalhe (asserts)."
 
 ### Etapa 4 — Escrever o primeiro teste (mostrar e explicar)
 Crie a classe de teste com os primeiros cenarios (comece pelo caminho feliz). Mostre
