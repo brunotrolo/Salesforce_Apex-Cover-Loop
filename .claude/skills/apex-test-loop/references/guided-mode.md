@@ -85,9 +85,10 @@ Para cada linha nao coberta, explique o cenario que falta e o que vai adicionar:
 > situacao e confere o resultado."
 
 Se cair num `catch`/DML dificil, explique a estrategia em ordem (dado invalido real
-→ mock → hook), seguindo `testing-dml-and-exceptions.md`. **Se for preciso tocar na
-classe de producao**, PAUSE: explique o que muda, por que, e o risco, e so faca com
-o "ok" do usuario — e avise que isso fica marcado para revisao.
+→ mock → hook) aplicando o craft da skill **platform-apex-test-generate** (mocking).
+**Se for preciso tocar na classe de producao**, isso e trabalho da
+**platform-apex-generate** com aprovacao — PAUSE, explique o que muda e o risco, e so
+faca com o "ok" do usuario, marcado para revisao.
 
 ### Etapa 8 — Repetir mostrando o progresso
 A cada volta do loop, mostre a cobertura subindo (`72% -> 88% -> 99%`) e o que ainda

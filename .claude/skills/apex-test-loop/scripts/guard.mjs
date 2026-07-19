@@ -45,11 +45,12 @@ export const DESTRUCTIVE_RULES = [
   },
 ];
 
-// Classificacao de comando: texto -> { blocked, why }.
+// Classificacao de comando: texto -> { blocked, why, decision }.
+// Comando destrutivo -> 'deny' (bloqueio duro, sem aprovacao possivel).
 export function classify(cmd) {
   const c = String(cmd || '').toLowerCase();
   for (const r of DESTRUCTIVE_RULES) {
-    if (r.re.test(c)) return { blocked: true, why: r.why };
+    if (r.re.test(c)) return { blocked: true, why: r.why, decision: 'deny' };
   }
   return { blocked: false };
 }
@@ -61,8 +62,10 @@ export function classify(cmd) {
 //  - .cls/.trigger de producao que NAO existe ainda (arquivo NOVO) -> permitido
 //    (criar um stub de dependencia faltante nunca destroi nada — habilita o modo
 //     scaffold);
-//  - .cls/.trigger de producao que JA EXISTE                       -> BLOQUEADO
-//    (nunca sobrescrever/editar a producao existente, incl. a classe sob teste).
+//  - .cls/.trigger de producao que JA EXISTE                       -> pede APROVACAO
+//    (decision 'ask'): a apex-test-loop nunca edita producao, mas a skill oficial
+//    platform-apex-generate pode refatorar producao com o ok do usuario. Nunca ha
+//    sobrescrita SILENCIOSA (o bug original) — sempre passa por um prompt.
 // `existsOverride` (opcional) permite testar sem tocar no disco.
 export function classifyWrite(filePath, existsOverride) {
   const p = String(filePath || '');
@@ -86,11 +89,12 @@ export function classifyWrite(filePath, existsOverride) {
 
   return {
     blocked: true,
+    decision: 'ask',
     why:
       'sobrescrita/edicao da classe/trigger de PRODUCAO existente ' +
       baseName(p) +
-      ' (a skill nunca altera producao existente — incl. a classe sob teste; ' +
-      'so cria/edita a classe de TESTE ou arquivos NOVOS de scaffold)',
+      ' (a apex-test-loop nunca altera producao — incl. a classe sob teste). ' +
+      'Editar producao e trabalho da platform-apex-generate, com sua aprovacao',
   };
 }
 
@@ -108,13 +112,21 @@ function fileExists(p) {
 }
 
 // --- Mensagem e hook -------------------------------------------------------
-function denyMessage(why) {
+function reasonMessage(verdict) {
+  if (verdict.decision === 'ask') {
+    return (
+      'ATENCAO (apex-test-loop): esta acao SOBRESCREVE/EDITA producao existente — ' +
+      verdict.why +
+      '. A apex-test-loop nunca edita producao; se isto e intencional (ex.: refatorar ' +
+      'via platform-apex-generate), aprove. Aprovar por engano reintroduz o bug de ' +
+      'sobrescrever a classe sob teste — na duvida, recuse.'
+    );
+  }
   return (
-    'BLOQUEADO pela skill apex-test-loop: acao proibida — ' +
-    why +
-    '. Esta skill so pode CRIAR/editar a classe de TESTE; nunca apagar, mover ou ' +
-    'substituir a classe de producao (no disco ou na org). Se voce realmente ' +
-    'precisa alterar a producao, faca manualmente/fora do agente, com revisao humana.'
+    'BLOQUEADO pela skill apex-test-loop: acao destrutiva proibida — ' +
+    verdict.why +
+    '. Nunca apagar/mover/deletar classe de producao, org ou registros. Se realmente ' +
+    'precisa, faca manualmente/fora do agente, com revisao humana.'
   );
 }
 
@@ -144,8 +156,8 @@ function runHook() {
         JSON.stringify({
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
-            permissionDecision: 'deny',
-            permissionDecisionReason: denyMessage(verdict.why),
+            permissionDecision: verdict.decision || 'deny',
+            permissionDecisionReason: reasonMessage(verdict),
           },
         })
       );
