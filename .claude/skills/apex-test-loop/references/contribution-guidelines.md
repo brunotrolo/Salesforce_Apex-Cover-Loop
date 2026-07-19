@@ -13,7 +13,7 @@ Registre uma recomendação (P-XXXX) se:
 **Não** registre:
 - ❌ Problema específico de UMA classe (é achado de produção, não padrão)
 - ❌ Decisão já coberta pelo SKILL.md
-- ❌ Duplicação — verifique `docs/apex-test-loop-recommendations.md` primeiro
+- ❌ Duplicação — verifique `references/apex-test-loop-recommendations.md` primeiro
 
 ## Formato mínimo
 
@@ -46,21 +46,21 @@ checkpoint qual ambiente causa divergência.
 
 ## Como Contribuir (Workflow)
 
-1. **Encontre o próximo ID livre** em `docs/apex-test-loop-recommendations.md`
+1. **Encontre o próximo ID livre** em `references/apex-test-loop-recommendations.md`
    (exemplo: se P-0010 existe, use P-0011)
 
 2. **Escreva a recomendação** no formato acima (agnóstico, sem nome de classe)
 
 3. **Commit direto no GitHub:**
    ```bash
-   git add docs/apex-test-loop-recommendations.md
+   git add .claude/skills/apex-test-loop/references/apex-test-loop-recommendations.md
    git commit -m "docs: padrão P-XXXX — <titulo>" \
      --author="User <user@example.com>"
-   git push origin <branch>
+   git push origin main
    ```
 
 4. **Notifique o usuário:**
-   > "Registrei 1 padrão (P-XXXX — <Titulo>) em docs/ baseado neste run. 
+   > "Registrei 1 padrão (P-XXXX — <Titulo>) em references/ baseado neste run. 
    > Serve como referência para próximas classes."
 
 ## Exemplos Reais
@@ -72,6 +72,6 @@ checkpoint qual ambiente causa divergência.
 
 ---
 
-**Todas as P-XXXX vivem em:** `docs/apex-test-loop-recommendations.md` (versionado no git)
+**Todas as P-XXXX vivem em:** `references/apex-test-loop-recommendations.md` (versionado no git)
 
 **Histórico da skill (R-0001 a R-0027):** `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` (local)

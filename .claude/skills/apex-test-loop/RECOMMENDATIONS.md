@@ -386,7 +386,7 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   antigo achado sob `.claude`/`.opencode`. Nota adicional: os SCRIPTS (dentro da
   skill) seguem o prefixo da ferramenta; so o STATE e neutro/compartilhado.
 
-### R-0029 — Centralizar padroes agnosticos em docs/ + separar os dois ledgers
+### R-0029 — Centralizar padroes agnosticos em references/ + separar os dois ledgers
 - **Status:** ✅ Aplicada (PR desta sessao)
 - **Data:** 2026-07-19
 - **Gatilho:** Um run em OpenCode gerou um `RECOMMENDATIONS.md` ad-hoc, especifico de
@@ -395,10 +395,10 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
 - **Problema:** (a) Nao havia lugar versionado e AGNOSTICO para padroes de teste
   reutilizaveis; (b) confundia-se aprendizado da skill (R-XXXX) com padrao de teste
   (P-XXXX); (c) a retrospectiva parecia exigir um script.
-- **Melhoria:** Novo `docs/apex-test-loop-recommendations.md` (raiz, versionado) para
+- **Melhoria:** Novo `references/apex-test-loop-recommendations.md` (versionado) para
   padroes AGNOSTICOS `P-XXXX` + `references/contribution-guidelines.md` (como
   contribuir sem citar classe). SKILL.md: tabela de destino do aprendizado (friccao
-  da skill → RECOMMENDATIONS.md; padrao reutilizavel → docs/), e nota de que a
+  da skill → RECOMMENDATIONS.md; padrao reutilizavel → references/), e nota de que a
   retrospectiva e reflexao (sem script). Adicionado tambem `FeatureManagement`/
   custom permission como categoria NOMEADA de linha inalcancavel em
   `runtime-blockers.md`, e `--ignore-conflicts` (com ressalva) nos erros comuns de

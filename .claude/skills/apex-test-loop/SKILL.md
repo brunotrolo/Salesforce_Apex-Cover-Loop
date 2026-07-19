@@ -358,7 +358,7 @@ ledger CERTO — sao dois, com propositos distintos:
 | O que voce aprendeu | Onde registrar | Formato |
 |---|---|---|
 | Friccao com **a propria skill** (guard travou algo legitimo, delegacao confusa, passo faltando, comando `sf` errado) | `RECOMMENDATIONS.md` (local da skill) | `R-XXXX` 🟡 Proposta |
-| **Padrao de teste agnostico** util para QUALQUER classe futura (categoria de linha inalcancavel, meta realista por tipo, armadilha recorrente) | `docs/apex-test-loop-recommendations.md` (raiz, versionado) | `P-XXXX` — veja `references/contribution-guidelines.md` |
+| **Padrao de teste agnostico** util para QUALQUER classe futura (categoria de linha inalcancavel, meta realista por tipo, armadilha recorrente) | `references/apex-test-loop-recommendations.md` (versionado) | `P-XXXX` — veja `references/contribution-guidelines.md` |
 
 **So registre quando houve FRICCAO/APRENDIZADO REAL** (guard bloqueou algo legitimo,
 dependencia travou, muitas iteracoes, decisao humana por ambiguidade, delegacao
@@ -391,7 +391,7 @@ conceitos; mostre o progresso (`72% -> 88% -> 99%`); as Travas continuam valendo
 ## Referencias
 
 **Memoria e autoaprendizado (FUNDAMENTAL — consulte primeiro antes de cada run):**
-- `docs/apex-test-loop-recommendations.md` — padroes agnósticos de teste descobertos
+- `references/apex-test-loop-recommendations.md` — padroes agnósticos de teste descobertos
   em campo (FeatureManagement, mocks, transacao grouping, meta realista, state file
   etc) + recomendacoes para a propria skill (R-0001 a R-0027). **Leia aqui quando:**
   encontrar padroes repetidos entre classes diferentes, decidir sobre arquitetura de

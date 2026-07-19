@@ -19,7 +19,7 @@ Veja `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` (detalhado). Resumo:
 | R-0015 a R-0021 | ✅ | Runtime blockers, fan-out, checkpoint | SKILL.md, parallel-methods.md |
 | R-0022 a R-0027 | ✅ | MVP deployable default, circuit-breaker, autonomia, benchmark | SKILL.md, runtime-blockers.md |
 | R-0028 | ✅ | Caminho neutro do state (Claude Code × OpenCode) | run-state.md, SKILL.md |
-| R-0029 | ✅ | Centralizar padrões agnósticos em docs/ + split de ledgers | docs/, SKILL.md, contribution-guidelines.md |
+| R-0029 | ✅ | Centralizar padrões agnósticos + split de ledgers | references/, SKILL.md, contribution-guidelines.md |
 
 ---
 
@@ -331,9 +331,9 @@ Quando rodar a skill `apex-test-loop` em uma classe:
    ```
 3. **Commit direto:**
    ```bash
-   git add docs/apex-test-loop-recommendations.md
+   git add .claude/skills/apex-test-loop/references/apex-test-loop-recommendations.md
    git commit -m "docs: padrão P-XXXX — <titulo>"
-   git push origin claude/loops-agents-test-skill-3i1h9v
+   git push origin main
    ```
 
 4. **Nunca mencione classe específica** — escreva como se ensinando um padrão genérico.
@@ -344,9 +344,9 @@ Quando rodar a skill `apex-test-loop` em uma classe:
 
 | Quando | Arquivo | Por quê |
 |--------|---------|---------|
-| Contribuir padrão agnóstico | `docs/apex-test-loop-recommendations.md` | Versionado, acessível, genérico |
+| Contribuir padrão agnóstico | `.claude/skills/apex-test-loop/references/apex-test-loop-recommendations.md` | Versionado, acessível, genérico |
 | Recomendação de skill | `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` | Histórico da evolução da skill |
-| Estado de UM run | `state/<Classe>.md` | Rastreabilidade da iteração |
+| Estado de UM run | `.apex-test-loop/state/<Classe>.md` | Rastreabilidade da iteração |
 | Guia de uso | `.claude/skills/apex-test-loop/SKILL.md` | Instruções executáveis |
 
 ---
