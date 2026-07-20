@@ -229,6 +229,33 @@ MESMO estado; veja `references/run-state.md`).
 
 ## O loop (repetir 1→4)
 
+> ### 🚦 GATE DE PRÉ-DEPLOY (vale para a PRIMEIRA iteração — NÃO PULE)
+>
+> O round-trip deploy→org custa **minutos**; a autoria custa **segundos e é local**.
+> Logo, **antes do PRIMEIRO deploy** é OBRIGATÓRIO esgotar a autoria:
+>
+> 1. **Materialize o inventário de cenários no state file.** A partir do mapa do Passo 0,
+>    liste TODOS os cenários a cobrir como checklist por método
+>    (`[ ] <metodo> — <ramo/caso>`) na seção `## Inventário de cenários` do
+>    `state/<Classe>.md`. É a sua lista dos "N itens" (podem ser 8 ou 150) — o **alvo
+>    concreto e definitivo** do run.
+> 2. **Autore a classe de teste cobrindo TODOS os itens que dá para escrever sem
+>    feedback de runtime** — o inventário inteiro, não um subconjunto. Pode quebrar a
+>    AUTORIA em quantos passos de escrita precisar (é local e de graça); o que **não
+>    pode** é deployar no meio.
+> 3. **Só então** rode o primeiro deploy (passo 2), carregando o lote inteiro.
+>
+> 🚫 **Anti-padrão PROIBIDO — drip-feed:** escrever 3 testes → deployar → escrever mais 3
+> → deployar. Cada deploy prematuro queima minutos de org por trabalho que já podia estar
+> no lote. A ÚNICA exceção é um **deploy de investigação declarado** (você precisa de UM
+> diagnóstico de runtime — ex.: descobrir o dado real que um Flow exige); aí diga que é
+> investigação, não drip-feed.
+>
+> Depois do gate, seja honesto: o primeiro run quase nunca fecha 99% (o runtime revela
+> falhas e linhas que a autoria não previu). As iterações 2+ trabalham **contra o
+> checklist** — marcam o que passou, consertam falhas, miram as `uncoveredLines` — em
+> poucos round-trips, não dezenas. O ganho é colapsar ~30 idas à org em ~5.
+
 1. **Escrever/melhorar** `force-app/**/classes/<Classe>Test.cls` (+ `.cls-meta.xml`).
    Para o COMO (estrutura, mocks, asserts, bulk, async, DML), aplique o craft de
    **platform-apex-test-generate**. Cada caminho relevante vira um `@IsTest` que
@@ -343,6 +370,12 @@ responde e desperdicio do tempo do usuario.
 segundos. Enfileire TUDO que se sabe fazer (corrigir todas as falhas + cobrir todas
 as linhas-alvo de todos os metodos mapeados) e gaste **um** deploy por iteracao.
 Meca o exito em "linhas-alvo eliminadas por deploy", nao em "iteracoes rodadas".
+**No PRIMEIRO deploy isso e TRAVA, nao sugestao** — cumpra o "🚦 GATE DE PRÉ-DEPLOY"
+no inicio do loop (autore o inventario INTEIRO antes de deployar). Modelos menores
+(ex.: rodando via OpenCode/DeepSeek) tendem a **pingar** — escrever pouco, deployar,
+repetir — e cada round-trip prematuro custa minutos de org por trabalho que ja podia
+estar no lote. O inventario materializado no `state/<Classe>.md` existe justamente para
+dar ao modelo um alvo concreto a esgotar antes de gastar o primeiro deploy.
 
 **3. Dieta de contexto.**
 - Leia a producao **por intervalos do inventario de metodos** (Passo 0), nunca o

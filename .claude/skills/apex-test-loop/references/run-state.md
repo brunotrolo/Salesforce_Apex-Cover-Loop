@@ -57,6 +57,12 @@ de seguranca ficou sem base. Regras:
    - Existe com `status: concluido` → run novo (a classe mudou?): confirme com o
      usuario e recomece o arquivo.
    - Nao existe → crie a partir do template abaixo antes da primeira iteracao.
+1b. **Antes do PRIMEIRO deploy (GATE DE PRÉ-DEPLOY):** preencha a seção
+   `## Inventário de cenários` com TODOS os cenários do mapa do Passo 0 (checklist por
+   método) e autore a classe de teste cobrindo todos eles. Marque `[x]` cada cenário
+   quando o teste dele estiver **escrito** (não quando passar). Só deploye com o
+   inventário esgotado. Isso impede o drip-feed (deploy prematuro) — crítico com
+   modelos menores via OpenCode.
 2. **Ao fim de CADA iteracao do loop:** atualize `iteracao`, `cobertura_atual`,
    `historico_cobertura`, `linhas_nao_cobertas`, marque o que foi feito e escreva o
    **proximo passo** em uma frase concreta.
@@ -90,10 +96,19 @@ de seguranca ficou sem base. Regras:
 - cobertura_atual: (sem baseline)
 - historico_cobertura: —
 - linhas_nao_cobertas: —
+- cenarios: 0/0 escritos       <!-- escritos na classe de teste / total do inventario -->
 - atualizado_em: <AAAA-MM-DD HH:MM>
+
+## Inventário de cenários (o GATE DE PRÉ-DEPLOY preenche ANTES do 1º deploy)
+<!-- Todos os cenários do mapa do Passo 0, por método. Autore TODOS antes de deployar.
+     Marque [x] quando o teste do cenário estiver ESCRITO (não quando passar). -->
+- [ ] <metodo1> — <ramo/caso a cobrir>
+- [ ] <metodo1> — <outro ramo>
+- [ ] <metodo2> — <caso de erro / exceção>
 
 ## Feito
 - [ ] Passo 0: classe localizada e mapeada
+- [ ] Inventário de cenários materializado (gate de pré-deploy)
 - [ ] Baseline medida (se teste ja existia)
 
 ## Proximo passo
@@ -119,10 +134,20 @@ de seguranca ficou sem base. Regras:
 - cobertura_atual: 88
 - historico_cobertura: 0 -> 72 -> 88
 - linhas_nao_cobertas: [45, 77]
+- cenarios: 12/14 escritos
 - atualizado_em: 2026-07-19 14:32
+
+## Inventário de cenários
+- [x] processCards — happy path (lista valida)
+- [x] processCards — lista vazia
+- [x] processCards — catch de DmlException (mock)
+- [ ] processCards — else da linha 45 (Card__c sem CardsInfo)
+- [ ] resolveInfo — linha 77 (retorno nulo do callout)
+<!-- ...demais itens... -->
 
 ## Feito
 - [x] Passo 0: classe em force-app/main/default/classes/CardHandler.cls; callout detectado
+- [x] Inventario materializado (14 cenarios) + autorados 12 antes do 1o deploy
 - [x] Iteracao 1: happy path + negativos (72%) — CardHandlerTest criada
 - [x] Iteracao 2: catch de DML via mock (88%)
 
