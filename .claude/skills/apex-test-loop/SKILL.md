@@ -204,8 +204,8 @@ MESMO estado; veja `references/run-state.md`).
    callout/assincrono** (`Http`, WSDL, `@future`, Queueable, Batchable, Schedulable,
    Platform Events) — para o COMO, aplique **platform-apex-test-generate**
    (mocks/async).
-   **Avalie a alcancabilidade e re-pactue a meta se preciso**: se a classe depende
-   fortemente de configuracao de org (muitos record types, Entitlements, Queues,
+   **Avalie a alcancabilidade (mas a meta continua ≥99% — NAO a abaixe)**: se a classe
+   depende fortemente de configuracao de org (muitos record types, Entitlements, Queues,
    Custom Settings), diga ao usuario DESDE JA quais ramos podem ser inalcancaveis
    neste ambiente e qual e a meta pratica — 99% e o padrao, nao uma promessa cega
    (veja `references/runtime-blockers.md`, "Meta honesta").
@@ -325,7 +325,7 @@ MESMO estado; veja `references/run-state.md`).
    - Passou → veja `coveredPercent` e `uncoveredLines`.
 
 4. **Decidir e SALVAR o checkpoint**:
-   - `coveredPercent >= 99` (ou a meta re-pactuada) **e** todos os testes passando
+   - `coveredPercent >= 99` **e** todos os testes passando
      → **concluir**. (No `--rigoroso`, exige tambem assert real em todo metodo.)
    - Senão → leia a classe de producao **nas `uncoveredLines`** (pelos intervalos do
      inventario de metodos — nao o arquivo inteiro), entenda os cenarios que faltam
@@ -358,8 +358,10 @@ pouco por iteracao e desperdicava contexto. Regras de execucao:
 **1. Autonomia por padrao — NAO pergunte, decida e reporte.** As politicas desta
 skill ja decidem quase tudo; se uma regra escrita cobre o caso, **aja** e registre a
 decisao no checkpoint. Os UNICOS pontos onde se pergunta ao usuario sao os nomeados:
-(a) editar/sobrescrever producao (guard `ask`); (b) ativar scaffold; (c) re-pactuar a
-meta/teto de ambiente; (d) estado ambiguo (ex.: checkpoints duplicados); (e) parada
+(a) editar/sobrescrever producao (guard `ask`); (b) ativar scaffold; (c) o teto de 99%
+parecer genuinamente inatingivel no ambiente (linhas bloqueadas por org/Flow) — ai PARE
+e apresente as opcoes, **sem NUNCA escrever meta < 99** (a regua so muda se o dono
+decidir); (d) estado ambiguo (ex.: checkpoints duplicados); (e) parada
 de seguranca/bloqueio genuino sem saida nas politicas. **Todo o resto — qual teste
 escrever, como corrigir uma falha de teste, que dado criar, ordem de ataque — e
 decisao SUA**, ja governada pelas Travas e pelo modo de qualidade vigente.
@@ -401,6 +403,13 @@ dar ao modelo um alvo concreto a esgotar antes de gastar o primeiro deploy.
    pago nao se joga fora.
 5. **Todos os testes DEVEM passar** — teste falhando e deploy-blocker; nao existe
    "deixar falhando para depois" no artefato final.
+6. **A meta e PISO FIXO ≥99% — o agente NUNCA a abaixa.** Nao escreva
+   `meta_cobertura` menor que 99, nem "aceite X%" por conta propria. Linhas
+   genuinamente inalcancaveis se documentam **uma a uma** (poucas linhas assim levam
+   100%→~99%, ainda ≥99). Se 99% parecer genuinamente inatingivel no ambiente (muitas
+   linhas bloqueadas por org/Flow), **PARE (parada de seguranca) e apresente as opcoes
+   ao humano** — a regua so muda se o DONO decidir, explicitamente. Modelo fraco
+   baixando a meta sozinho (ex.: escrever 95 no state file sem aval) e **violacao**.
 
 ## 📐 Regras de qualidade [rigoroso] (so quando o usuario pedir `--rigoroso`)
 
@@ -450,7 +459,7 @@ ledger CERTO — sao dois, com propositos distintos:
 | O que voce aprendeu | Onde registrar | Formato |
 |---|---|---|
 | Friccao com **a propria skill** (guard travou algo legitimo, delegacao confusa, passo faltando, comando `sf` errado) | `RECOMMENDATIONS.md` (**local** — nunca da push) | `R-XXXX` 🟡 Proposta |
-| **Padrao de teste agnostico** util para QUALQUER classe futura (categoria de linha inalcancavel, meta realista por tipo, armadilha recorrente) | `references/apex-test-loop-recommendations.md` (**local** — nunca da push) | `P-XXXX` — veja `references/contribution-guidelines.md` |
+| **Padrao de teste agnostico** util para QUALQUER classe futura (categoria de linha inalcancavel por tipo de classe, armadilha recorrente) | `references/apex-test-loop-recommendations.md` (**local** — nunca da push) | `P-XXXX` — veja `references/contribution-guidelines.md` |
 
 **So registre quando houve FRICCAO/APRENDIZADO REAL** (guard bloqueou algo legitimo,
 dependencia travou, muitas iteracoes, decisao humana por ambiguidade, delegacao
@@ -462,7 +471,8 @@ nao registre nada** — ruido e pior que silencio. Nunca cite uma classe especif
 run longo "ate 99%", o fim pode demorar dezenas de iteracoes e o detalhe se perde
 na compactacao de contexto). E grave qualquer compromisso de qualidade: cenario
 obrigatorio nao coberto, teste em memoria por bloqueio de Flow, excecao de org
-contornada, meta re-pactuada para baixo. Nesses casos: registre no ledger e anote
+contornada, **meta escrita abaixo de 99** (proibido — a regua e piso fixo; se isso
+aconteceu, e um erro a corrigir, nao um estado valido). Nesses casos: registre no ledger e anote
 no checkpoint (`state/<Classe>.md`, Bloqueios) **no momento em que acontecer**, e
 avise o usuario na mesma resposta.
 
@@ -488,11 +498,11 @@ conceitos; mostre o progresso (`72% -> 88% -> 99%`); as Travas continuam valendo
 
 **Memoria e autoaprendizado (FUNDAMENTAL — consulte primeiro antes de cada run):**
 - `references/apex-test-loop-recommendations.md` — padroes agnósticos de teste descobertos
-  em campo (FeatureManagement, mocks, transacao grouping, meta realista, state file
-  etc) + recomendacoes para a propria skill (R-0001 em diante). **Leia aqui quando:**
-  encontrar padroes repetidos entre classes diferentes, decidir sobre arquitetura de
-  mocks, questionar se a meta e realista, ou contribuir uma licao nova (ver secao 4
-  do arquivo para contribuir).
+  em campo (FeatureManagement, mocks, transacao grouping, linhas inalcancaveis por tipo
+  de classe, state file etc) + recomendacoes para a propria skill (R-0001 em diante).
+  **Leia aqui quando:** encontrar padroes repetidos entre classes diferentes, decidir
+  sobre arquitetura de mocks, mapear quais linhas tendem a ser inalcancaveis (a meta
+  segue ≥99%), ou contribuir uma licao nova (ver secao 4 do arquivo para contribuir).
 
 **Nossas (unicas desta camada):**
 - `references/parallel-methods.md` — decomposicao por metodo (fan-out) para classes

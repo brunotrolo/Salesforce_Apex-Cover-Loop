@@ -7,7 +7,7 @@ Quando rodar esta skill (`apex-test-loop`) em uma classe, se encontrar fricção
 Registre uma recomendação (P-XXXX) se:
 - ✅ Encontrou padrão duplicado em múltiplas classes
 - ✅ Resolveu um bloqueio (Feature Flags, mocks, Flow, config)
-- ✅ Descobriu uma meta realista que difere de 99%
+- ✅ Descobriu uma categoria de linha tipicamente inalcançável por tipo de classe (a meta segue 99%; muda o que se documenta como exceção)
 - ✅ Achou um anti-padrão perigoso
 
 **Não** registre:
@@ -85,7 +85,7 @@ pisar no trabalho um do outro. A junção é um passo humano, central.
 - **P-0001** (FeatureManagement): teste não pode ativar feature flags de org
 - **P-0002** (Callouts): mock inteligente que distingue token-endpoint de API
 - **P-0003** (Duplicação): extrair lógica comum em método privado
-- **P-0009** (Meta realista): classes com Flow bloqueado têm teto de 85-90%
+- **P-0009** (Linhas inalcançáveis por tipo): classes com Flow bloqueado têm linhas pós-DML a documentar (a meta segue ≥99%)
 
 ---
 

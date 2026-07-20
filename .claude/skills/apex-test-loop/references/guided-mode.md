@@ -99,8 +99,10 @@ Se o teste falhar **por causa da org** (um Flow bloqueando, configuracao que nao
 existe, limite de CPU), seja honesto com o usuario em vez de dar um jeitinho:
 *"esse erro nao e do teste — e do ambiente. As opcoes sao A, B ou C"* (siga
 `runtime-blockers.md`). Nunca esconda o problema fazendo o teste "passar" vazio —
-e se a meta de cobertura for inalcancavel neste ambiente, explique o porque e
-re-pactue o numero com ele.
+e se a meta de cobertura parecer inalcancavel neste ambiente, explique o porque e
+apresente as opcoes (apontar a org certa, ou documentar as linhas bloqueadas) — a
+meta continua ≥99%, voce **nao** abaixa o numero por conta propria (isso e decisao
+do dono).
 **Se for preciso tocar na classe de producao**, isso e trabalho da
 **platform-apex-generate** com aprovacao — PAUSE, explique o que muda e o risco, e so
 faca com o "ok" do usuario, marcado para revisao.

@@ -89,7 +89,7 @@ de seguranca ficou sem base. Regras:
 # Estado do loop — <Classe>
 
 - status: em_andamento            <!-- em_andamento | concluido | pausado_bloqueado -->
-- meta_cobertura: 99               <!-- se re-pactuada com o usuario, atualize aqui e registre abaixo -->
+- meta_cobertura: 99               <!-- PISO FIXO >=99. O agente NUNCA escreve menos. Linhas inalcancaveis se documentam uma a uma; se 99 for inatingivel, PARE e reporte ao humano (nao abaixe o numero). -->
 - org: <alias>
 - modo: automatico                <!-- automatico | guiado | scaffold -->
 - iteracao: 0/6
@@ -115,9 +115,11 @@ de seguranca ficou sem base. Regras:
 - <uma frase concreta e acionavel>
 
 ## Bloqueios / decisoes do humano
-- (vazio)                          <!-- se a meta foi re-pactuada (runtime-blockers.md,
-                                         "Quando o teto so fica claro DEPOIS"), registre
-                                         aqui a pergunta feita e a resposta do usuario —
+- (vazio)                          <!-- a meta NAO cai de 99 (piso fixo). Se ha linhas
+                                         inalcancaveis, liste-as aqui como excecoes
+                                         documentadas (linha + motivo concreto). Se 99
+                                         for inatingivel no ambiente, registre a
+                                         pergunta feita ao humano e a resposta dele —
                                          assim, ao retomar, o agente NAO pergunta de novo -->
 ```
 

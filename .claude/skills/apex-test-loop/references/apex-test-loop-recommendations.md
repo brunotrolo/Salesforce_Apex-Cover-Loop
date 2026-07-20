@@ -220,21 +220,26 @@ Exemplo:
 
 ---
 
-### P-0009 — Meta de Cobertura Realista por Tipo de Classe
+### P-0009 — Linhas Tipicamente Inalcançáveis por Tipo de Classe
 
-**Padrão:** Classes com Feature Flags têm teto de 90-95%; classes puras (lógica sem constraints) alcançam 99%+.
+> ⚠️ **A meta NÃO muda — é piso fixo ≥99% (Trava #6).** Este padrão mapeia QUAIS
+> linhas costumam ser inalcançáveis por tipo de classe, para você **documentá-las uma
+> a uma** como exceções — **nunca** para abaixar o número da meta. Se muitas linhas são
+> bloqueadas e 99% fica inatingível no ambiente, a saída é apontar a org certa ou
+> PARAR e o dono decidir (não escrever 85/90/95).
 
-**Estratégia:**
-Avaliar no Passo 0 e re-pacuar a meta:
+**Padrão:** o *tipo* da classe prevê ONDE moram as linhas dependentes de ambiente:
 
-| Tipo | Meta Realista | Exemplo |
-|------|---------------|---------|
-| Sem Feature Flags / Permissions | >= 95% | Controllers, helpers, parsers |
-| Com FeatureManagement (1-5 linhas) | >= 92% | Linhas inalcançáveis bem localizadas |
-| Com Flows bloqueando DML | >= 85-90% | Campos validados por automação |
-| Com Callouts não-mockáveis | >= 80-90% | Network timeouts, auth externa |
+| Tipo | Onde costumam estar as linhas inalcançáveis | Exemplo |
+|------|---------------------------------------------|---------|
+| Sem Feature Flags / Permissions | quase nenhuma — 99% é normal | Controllers, helpers, parsers |
+| Com FeatureManagement (1-5 linhas) | ramos atrás de `FeatureManagement.checkPermission` | Linhas bem localizadas |
+| Com Flows bloqueando DML | caminhos pós-`insert`/`update` que o Flow barra | Campos validados por automação |
+| Com Callouts não-mockáveis | timeouts/auth externa | Network timeouts, auth externa |
 
-**Recomendação:** Passo 0 item 3 registra a meta re-pactuada no state file.
+**Recomendação:** no Passo 0, antecipe ao usuário quais ramos podem ser inalcançáveis
+neste ambiente; ao esbarrar neles, documente cada linha (linha + motivo) na seção
+"Bloqueios / decisões do humano" do state file. A meta segue **99**.
 
 ---
 

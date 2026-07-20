@@ -112,17 +112,22 @@ cresce, PARE de escrever testes novos e diagnostique:
 - A partir dai, **cada teste novo deve nomear as linhas-alvo** (do `uncoveredLines`)
   que pretende cobrir — e a iteracao seguinte confere se elas sairam da lista.
 - Se as linhas restantes forem todas dependentes de config/feature ausente, nao ha o
-  que "forcar": documente-as como inalcancaveis neste ambiente e ajuste a meta com o
-  usuario (veja abaixo).
+  que "forcar": documente-as **uma a uma** como inalcancaveis neste ambiente (linha +
+  motivo). A meta NAO cai por isso (veja abaixo).
 
-## Meta honesta
+## Meta honesta — piso fixo ≥99%, nunca "aceitar X%"
 
-99% e a meta padrao, nao uma promessa cega. No Passo 0, se a classe depende
-fortemente de configuracao de org (dezenas de record types, Entitlements, Queues),
-**diga isso ao usuario desde o inicio** e re-pacte: *"a meta pratica neste ambiente e
-X%, porque os ramos A/B/C dependem de config que nao existe aqui — na org correta
-eles se tornam alcancaveis"*. Meta ajustada com transparencia vale mais que 99% de
-fachada.
+**A meta e piso fixo ≥99% e o agente NUNCA a abaixa.** Nao escreva `meta_cobertura < 99`
+nem "aceite X%" por conta propria — isso e Trava (SKILL.md, ⛔ Travas #6). O jeito
+honesto de lidar com o que nao da pra cobrir NAO e derrubar o numero, e sim:
+
+- **Poucas linhas inalcancaveis** (FeatureManagement, permissao, config ausente) →
+  **documente cada uma** (linha + motivo). Elas levam 100%→~99% de forma legitima —
+  ainda ≥99, ainda dentro da meta.
+- **Muitas linhas bloqueadas (99% genuinamente inatingivel neste ambiente)** → NAO
+  escreva 95/90/85. **PARE (parada de seguranca)** e apresente as opcoes ao humano
+  (abaixo). So o DONO, explicitamente, pode aceitar uma excecao — o agente nunca
+  decide isso sozinho (foi o erro do modelo fraco: escrever 95 no state file sem aval).
 
 ### Quando o teto so fica claro DEPOIS de ja rodar iteracoes
 
@@ -136,8 +141,11 @@ confirmacao concreto**, com opcoes nomeadas — nao decida sozinho e nao force:
 > *"A cobertura estabilizou em X%. As linhas [lista] dependem de [Groups/Queues/
 > Entitlements/Flow] que [nao existem nesta org / estao bloqueados pela automacao].
 > Suas opcoes:*
-> *(a) apontar para uma org/sandbox que tenha essa configuracao completa;*
-> *(b) aceitar X% como meta final para este ambiente e concluir o run aqui;*
+> *(a) apontar para uma org/sandbox que tenha essa configuracao completa (preferida —
+>      mantem a meta ≥99% de verdade);*
+> *(b) VOCE (dono) aceitar explicitamente essas linhas como excecoes documentadas e
+>      concluir — a meta segue registrada como 99 com as linhas listadas como
+>      inalcancaveis; o agente NAO escreve um numero menor por conta propria;*
 > *(c) [so se for dev/treino] usar `--scaffold` para o que for metadata criavel
 > (objetos/campos custom, `__mdt`) — mas sendo claro que features de org habilitadas
 > (ex.: Entitlement Management) e automacoes (Flow) NAO sao scaffoldable, essas
