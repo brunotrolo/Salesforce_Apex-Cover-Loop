@@ -1,4 +1,4 @@
-# Informacoes Complementares — Salesforce-LoopAgentApex
+# Informacoes Complementares — Salesforce Apex Cover Loop
 
 > **Comeco rapido:** [README.md](./README.md) (2 min) ← → **INFORMACOES-COMPLEMENTARES.md** (referencia detalhada)
 
@@ -200,7 +200,7 @@ Em vez de copiar o `.claude`, **clone** este repo e trabalhe dentro dele, coloca
 
 **Solucao:** use um CLONE, nao um download.
 ```bash
-git clone https://github.com/brunotrolo/Salesforce-LoopAgentApex.git
+git clone https://github.com/brunotrolo/salesforce-apex-cover-loop.git
 ```
 
 Se o push pedir senha/der erro de autenticacao:

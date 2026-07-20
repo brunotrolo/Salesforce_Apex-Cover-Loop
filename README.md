@@ -1,4 +1,4 @@
-# Salesforce-LoopAgentApex
+# Salesforce Apex Cover Loop
 
 Arquitetura **hibrida** para o Claude Code criar **classes de teste Apex** no **minimo viavel deployavel**: meta padrao `>= 99%` de cobertura com **todos os testes passando** (o que Salesforce exige para deploy). Quer verificacao exaustiva? Use `--rigoroso`.
 
@@ -30,12 +30,12 @@ Rode **de dentro da pasta do seu projeto** (onde esta `force-app`):
 
 **Windows (PowerShell):**
 ```powershell
-git clone --depth 1 https://github.com/brunotrolo/Salesforce-LoopAgentApex.git .skill-tmp; New-Item -ItemType Directory -Force .claude | Out-Null; Copy-Item -Recurse -Force .skill-tmp\.claude\* .claude\; Remove-Item -Recurse -Force .skill-tmp
+git clone --depth 1 https://github.com/brunotrolo/salesforce-apex-cover-loop.git .skill-tmp; New-Item -ItemType Directory -Force .claude | Out-Null; Copy-Item -Recurse -Force .skill-tmp\.claude\* .claude\; Remove-Item -Recurse -Force .skill-tmp
 ```
 
 **Mac / Linux / Git Bash:**
 ```bash
-git clone --depth 1 https://github.com/brunotrolo/Salesforce-LoopAgentApex.git .skill-tmp && mkdir -p .claude && cp -r .skill-tmp/.claude/. .claude/ && rm -rf .skill-tmp
+git clone --depth 1 https://github.com/brunotrolo/salesforce-apex-cover-loop.git .skill-tmp && mkdir -p .claude && cp -r .skill-tmp/.claude/. .claude/ && rm -rf .skill-tmp
 ```
 
 > **Para atualizar:** rode o mesmo comando de novo. Para mais detalhes (alternativas, contribuir melhorias), veja [INFORMACOES-COMPLEMENTARES.md](./INFORMACOES-COMPLEMENTARES.md).

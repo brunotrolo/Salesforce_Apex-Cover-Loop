@@ -83,7 +83,7 @@ consegue enviar pro GitHub** (foi exatamente o que aconteceu num run real).
 
 ```bash
 # 1) Clonar o repo (cria .git + remote + rastreio da main automaticamente):
-git clone https://github.com/brunotrolo/Salesforce-LoopAgentApex.git
+git clone https://github.com/brunotrolo/salesforce-apex-cover-loop.git
 
 # 2) Trabalhar SEMPRE dentro dessa pasta clonada (o OpenCode aponta pra ela).
 #    A partir daí, git add/commit/push funcionam.
