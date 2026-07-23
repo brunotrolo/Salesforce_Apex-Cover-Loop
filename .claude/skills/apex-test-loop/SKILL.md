@@ -52,6 +52,29 @@ critério de conclusão, travas de segurança, condição de parada) vive num ú
 4. Ao final (concluído ou pausado), apresenta o resumo que o orquestrador devolveu —
    não reinterpreta nem resume por conta própria.
 
+### ⛔ Delegação é EXCLUSIVA — você (skill) NUNCA roda o loop (falha real observada)
+
+Num run real (`invoiceSummary_ctr`), o Task do `apex-orchestrator` voltou no meio do
+loop (após o 1º deploy, provavelmente por teto de tempo/tool-calls do harness — ~89
+chamadas / ~30min). O agente principal então **assumiu o loop ele mesmo**: editou a
+classe de teste, rodou `apex-coverage.mjs`, editou o checkpoint e analisou as falhas —
+tudo inline, sem reinvocar ninguém. Isso **colapsou a arquitetura V2** (orquestrador +
+4 subagentes) num único agente e furou a separação de papéis. Regras que impedem isso:
+
+- **Você (a skill/agente principal) NUNCA edita a classe de teste, NUNCA roda deploy/
+  cobertura, NUNCA escreve o checkpoint, NUNCA analisa cobertura.** Esse é o trabalho
+  dos subagentes, coordenados pelo orquestrador. Seu papel é só: identificar a classe,
+  invocar o orquestrador, e apresentar o resumo final. Nada entre isso.
+- **Se o Task do orquestrador RETORNAR sem um status terminal** (`concluido` ou
+  `bloqueado` explícito no retorno), o loop NÃO acabou — ele foi interrompido. A ÚNICA
+  ação correta é **reinvocar o `apex-orchestrator`** (via Task), instruindo-o a retomar
+  do checkpoint (`state/<Classe>.md`). Repita quantas vezes for preciso até vir um
+  status terminal. **Nunca** "termine o serviço você mesmo" — mesmo que pareça que
+  faltam só pequenos ajustes.
+- Sintoma de que você está prestes a violar isto: você se pegar criando TODOs tipo
+  "corrigir as N falhas", "deployar a correção", "medir cobertura". Se esses TODOs são
+  seus (e não do orquestrador), PARE e reinvoque o orquestrador.
+
 ## Modo guiado (`--guiado`/`--passo-a-passo`)
 
 Quando pedido, a skill instrui o `apex-orchestrator` a seguir

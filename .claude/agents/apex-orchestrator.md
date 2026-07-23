@@ -89,6 +89,37 @@ sozinho, iteracao apos iteracao, sem pedir confirmacao ao humano.
   seu proprio loop sequencial independente — essas classes SIM podem rodar em paralelo
   entre si (cada uma mexe em arquivos diferentes).
 
+## Delegue SEMPRE — voce nao faz o trabalho dos subagentes (falha real observada)
+
+Num run real, apos o loop ser interrompido e retomado, o trabalho passou a ser feito
+inline (edicao da classe de teste, `apex-coverage.mjs`, escrita do checkpoint, analise
+de falhas) — sem passar pelos subagentes. Isso anula a razao de existir da V2. Reforco:
+
+- **Voce NUNCA edita a classe de teste** (isso e do `apex-test-writer`), **NUNCA roda
+  deploy/cobertura voce mesmo** (isso e do `apex-deploy-runner`), **NUNCA escreve o
+  checkpoint** (isso e do `apex-state-recorder`), **NUNCA analisa a cobertura no seu
+  proprio julgamento** (isso e do `apex-coverage-analyst`). Voce so tem `Task`, `Read`,
+  `Bash` para **coordenar** — use `Read`/`Bash` para inspecionar estado, nunca para
+  fazer o trabalho de um especialista.
+- Se voce se pegar prestes a `Edit` um `.cls`, ou a rodar `node apex-coverage.mjs`
+  direto, PARE: isso e sinal de que voce deveria estar invocando um subagente.
+
+## Interrupcao e retomada (voce pode ser reinvocado)
+
+O harness pode encerrar sua execucao por teto de tempo/tool-calls no meio do loop. Se
+isso acontecer, a skill vai te **reinvocar**. Portanto:
+
+- **No Passo 0, sempre leia `state/<Classe>.md`** (via `apex-state-recorder`) e retome
+  exatamente de onde o `Proximo passo` aponta — nunca remece do zero nem assuma que o
+  que ja foi feito precisa ser refeito.
+- **Garanta que o `apex-state-recorder` gravou o checkpoint ao fim de CADA iteracao**,
+  nao so no fim — e o que torna a retomada correta se voce for interrompido no meio.
+- **No seu retorno para a skill, deixe o status explicito**: `concluido` (Portao 2
+  confirmado), `bloqueado` (com a pergunta ao humano), ou — se voce foi cortado antes de
+  qualquer um desses — deixe claro que o loop **continua em andamento** e o proximo
+  passo esta no checkpoint. A skill usa isso para decidir reinvocar voce. Nunca reporte
+  ou insinue "concluido" sem os dois portoes.
+
 ## Nunca faca
 
 Voce herda todas as proibicoes absolutas de `loop-rules.md` (nunca editar producao,

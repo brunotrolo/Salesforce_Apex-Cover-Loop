@@ -647,4 +647,36 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   confirmado` com o resultado real do `deploy validate`. Só então R-0037/R-0038 podem
   virar `✅ Aplicada`.
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0040, R-0041... -->
+### R-0040 — V2 homologação: agente principal assumiu o loop após interrupção do orquestrador
+- **Status:** 🟢 Aprovada e aplicada nesta mesma rodada
+- **Data:** 2026-07-23
+- **Gatilho:** segundo run de homologação da V2 (`invoiceSummary_ctr`). O Task do
+  `apex-orchestrator` retornou no meio do loop (após o 1º deploy: 47%, 6/12 falhando —
+  provável teto de tempo/tool-calls do harness, ~89 chamadas / ~30min). O **agente
+  principal (skill)** então assumiu o loop ele mesmo: editou `invoiceSummary_ctrTest.cls`,
+  rodou `apex-coverage.mjs`, editou o checkpoint e analisou as 6 falhas — tudo inline,
+  sem reinvocar o orquestrador nem nenhum subagente.
+- **Problema:** colapso da arquitetura V2 num único agente. A separação de papéis
+  (writer/runner/analyst/recorder), a allowlist do state-recorder e a disciplina dos
+  dois portões perdem o sentido se o agente de topo faz tudo. O `SKILL.md` mandava
+  "ficar fora do caminho", mas não dizia **o que fazer se o Task do orquestrador
+  voltasse sem status terminal** — então o agente "ajudou" fazendo o trabalho.
+- **Melhoria aplicada:**
+  1. `SKILL.md`: nova seção "Delegação é EXCLUSIVA" — o agente principal NUNCA edita
+     teste/roda deploy/escreve checkpoint/analisa cobertura; se o Task do orquestrador
+     retornar sem `concluido`/`bloqueado` explícito, a ÚNICA ação é **reinvocar** o
+     orquestrador para retomar do checkpoint, quantas vezes for preciso. Sintoma de
+     violação nomeado (TODOs tipo "corrigir as N falhas" são do orquestrador, não seus).
+  2. `apex-orchestrator.md`: seção "Delegue SEMPRE" (nunca faz o trabalho dos
+     subagentes inline) + "Interrupção e retomada" (pode ser reinvocado; ler checkpoint
+     no Passo 0; garantir que o recorder grava a cada iteração; retorno com status
+     explícito para a skill decidir reinvocar).
+- **Observação secundária (não corrigida aqui):** no Windows, `sf` no PATH apontava
+  para `C:\Program Files\...` e alguns comandos quebraram com `'C:\Program' não é
+  reconhecido` (aspas/espaços no caminho, mistura Git Bash × cmd). Contornado no run com
+  `powershell -Command`. Candidato a hardening futuro do `apex-coverage.mjs`/fallbacks.
+- **Próximo passo:** re-rodar a homologação e confirmar, pelo trace, que TODA iteração
+  (não só a primeira) passa pelos subagentes — e que interrupções do orquestrador
+  resultam em **reinvocação**, não em o agente principal assumir.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0041, R-0042... -->
