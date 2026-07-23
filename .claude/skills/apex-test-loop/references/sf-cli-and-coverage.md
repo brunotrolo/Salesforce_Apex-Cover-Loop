@@ -119,6 +119,36 @@ Como ler:
 - Falhas de teste: itens de `result.tests[]` com `Outcome != "Pass"` trazem
   `Message` e `StackTrace`.
 
+## 4) Confirmacao oficial de deployabilidade (Portão 2 — UMA vez, ao final)
+
+Depois que o loop bate o Portão 1 (`>=99%` via `apex run test`, sem falhas nem testes
+lentos), rode a **validacao oficial de deploy** uma unica vez. E o mesmo gate que a
+Salesforce aplica a um deploy real: para deployar uma classe, **o que prevalece e a
+cobertura** — este comando confirma que o conjunto DEPLOYARIA em producao, nao apenas
+que "os testes passaram".
+
+```bash
+sf project deploy validate \
+  --metadata ApexClass:MinhaClasse ApexClass:MinhaClasseTest \
+  --test-level RunSpecifiedTests \
+  --tests MinhaClasseTest \
+  --coverage-formatters json \
+  --json --target-org minhaOrg
+```
+
+- `deploy validate` e **check-only**: simula o deploy inteiro (compila + roda os testes
+  pedidos + calcula cobertura) e **NAO grava nada na org**. Por isso e seguro incluir a
+  classe de PRODUCAO no `--metadata` (nao sobrescreve nada) — replica o comando que os
+  devs usam para liberar em producao.
+- `--test-level RunSpecifiedTests --tests <TestClass>` roda so o(s) teste(s) dessa
+  classe (nao a suite inteira da org).
+- Se a validacao **falhar** apesar de o `apex run test` ter dado `>=99%` (ex.: cobertura
+  agregada da org abaixo do minimo, ou dependencia ausente), isso NAO e conclusao — o
+  motivo real vem no erro da validacao. O script emite isso como `validateError`.
+- **Nao rode isto a cada iteracao** — e mais pesado que `apex run test` e nao deixa nada
+  persistido. So uma vez, ao final (Portão 2 de `loop-rules.md`). O
+  `apex-coverage.mjs --validate` automatiza este comando.
+
 ## Erros comuns
 
 - **"No test classes found"** → a classe de teste nao foi deployada (rode o passo 1).

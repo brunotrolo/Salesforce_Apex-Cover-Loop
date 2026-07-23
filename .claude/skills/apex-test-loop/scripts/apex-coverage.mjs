@@ -16,6 +16,10 @@
 //   --test-only  deploya SOMENTE a classe de teste (PADRAO recomendado do loop).
 //   --deploy     deploya producao + teste (so se a producao for nova/alterada).
 //   (sem --test-only nem --deploy: nao deploya — so mede o que JA esta na org.)
+//   --validate   CONFIRMACAO OFICIAL de deployabilidade (check-only, nao grava na
+//                org): `sf project deploy validate --test-level RunSpecifiedTests`.
+//                Rode UMA vez ao FINAL do loop (nao a cada iteracao). Emite
+//                { phase:"validate", deployWouldSucceed, coveredPercent, ... }.
 //   --slow-ms N  limiar (ms) para sinalizar metodos LENTOS/FRAGEIS em "slowTests"
 //                (padrao 8000). Fragilidade de CPU latente, nao falha — ver SKILL.md.
 //
@@ -103,6 +107,90 @@ function parseJsonLoose(stdout) {
 function emit(obj, exitCode) {
   console.log(JSON.stringify(obj, null, 2));
   process.exit(exitCode);
+}
+
+// ---------------------------------------------------------------------------
+// 0) MODO VALIDACAO OFICIAL (--validate): confirmacao de DEPLOYABILIDADE.
+//    Roda `sf project deploy validate` (CHECK-ONLY: simula o deploy inteiro e NAO
+//    grava nada na org) com --test-level RunSpecifiedTests. Este e o MESMO gate
+//    que a Salesforce aplica a um deploy real: se a cobertura nao bater o minimo
+//    exigido pela org, a validacao FALHA. E o criterio de verdade "isso deployaria
+//    em producao?", nao apenas "os testes passaram".
+//    USO NO LOOP: NAO rode isto a cada iteracao (e mais pesado). Rode UMA vez, ao
+//    FINAL, quando o loop achar que ja bateu >=99% via `apex run test` — como
+//    confirmacao oficial antes de declarar `concluido`. Inclui a classe de
+//    PRODUCAO + a de TESTE no --metadata (validate e check-only, nao sobrescreve
+//    nada), replicando o comando que os devs usam para liberar em producao.
+// ---------------------------------------------------------------------------
+const doValidate = !!arg('validate', false);
+if (doValidate) {
+  const meta = [`ApexClass:${className}`, `ApexClass:${testName}`];
+  if (typeof extra === 'string') {
+    for (const m of extra.split(',')) if (m.trim()) meta.push(m.trim());
+  }
+  const vArgs = ['project', 'deploy', 'validate'];
+  for (const m of meta) vArgs.push('--metadata', m);
+  vArgs.push(
+    '--test-level',
+    'RunSpecifiedTests',
+    '--tests',
+    testName,
+    '--coverage-formatters',
+    'json',
+    '--json',
+    ...orgArgs
+  );
+
+  const v = runSf(vArgs);
+  const vj = parseJsonLoose(v.stdout || '');
+  const result = vj?.result || {};
+  const wouldSucceed = v.status === 0 && vj && vj.status === 0;
+
+  // Resultado dos testes dentro da validacao (estrutura difere do `apex run test`).
+  const rtr = result.details?.runTestResult || result.runTestResult || {};
+  const cov = Array.isArray(rtr.codeCoverage) ? rtr.codeCoverage : [];
+  const entry = cov.find((c) => (c.name || c.Name) === className);
+
+  let coveredPercent = null;
+  let uncoveredLines = [];
+  if (entry) {
+    const total = Number(entry.numLocations ?? 0);
+    const notCovered = Number(entry.numLocationsNotCovered ?? 0);
+    coveredPercent = total ? Math.round(((total - notCovered) / total) * 100) : null;
+    const locs = entry.locationsNotCovered || [];
+    uncoveredLines = (Array.isArray(locs) ? locs : [locs])
+      .map((l) => Number(l?.line ?? l))
+      .filter((n) => Number.isFinite(n))
+      .sort((a, b) => a - b);
+  }
+
+  const rtFailures = Array.isArray(rtr.failures) ? rtr.failures : rtr.failures ? [rtr.failures] : [];
+  const failures = rtFailures.map((f) => ({
+    method: `${f.name || testName}.${f.methodName || ''}`,
+    message: f.message,
+    stackTrace: f.stackTrace,
+  }));
+
+  emit(
+    {
+      phase: 'validate',
+      // A pergunta de verdade: este conjunto DEPLOYARIA em producao?
+      deployWouldSucceed: wouldSucceed,
+      class: className,
+      coveredPercent,
+      uncoveredLines,
+      testsRan: Number(rtr.numTestsRun ?? 0) || undefined,
+      failing: Number(rtr.numFailures ?? failures.length) || 0,
+      failures,
+      // Quando a validacao falha sem ser por teste (ex.: cobertura da ORG toda
+      // abaixo do minimo, dependencia ausente), o motivo vem aqui.
+      validateError: wouldSucceed
+        ? undefined
+        : vj?.message || result.errorMessage || 'Validacao de deploy falhou. Veja "raw".',
+      raw: wouldSucceed ? undefined : (v.stdout || v.stderr || '').slice(0, 4000),
+    },
+    wouldSucceed && (coveredPercent ?? 0) >= 99 && failures.length === 0 ? 0 : 1
+  );
 }
 
 // ---------------------------------------------------------------------------
