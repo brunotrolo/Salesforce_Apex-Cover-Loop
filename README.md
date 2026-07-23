@@ -73,6 +73,22 @@ git clone --depth 1 https://github.com/brunotrolo/Salesforce-Apex-Cover-Loop.git
 git clone --depth 1 https://github.com/brunotrolo/Salesforce-Apex-Cover-Loop.git .skill-tmp && mkdir -p .claude && cp -r .skill-tmp/.claude/. .claude/ && rm -rf .skill-tmp
 ```
 
+> **Deu erro de SSL no `git clone`?** (comum em máquina corporativa com proxy que
+> inspeciona SSL — mensagem `SSL certificate problem: self-signed certificate in
+> certificate chain`). Rode **uma vez** e tente o clone de novo:
+> ```bash
+> git config --global http.sslBackend schannel
+> ```
+> Isso faz o Git usar o repositório de certificados do **Windows** (que já confia no CA
+> da sua empresa), em vez do bundle próprio dele. Só funciona no Windows (Git Bash /
+> PowerShell). **Nunca** use `git config --global http.sslVerify false` como atalho —
+> desliga a verificação de certificado para *todos* os repositórios, um risco de segurança.
+>
+> **Erro `rm: cannot remove '.skill-tmp': Device or resource busy` no fim?** A cópia já
+> deu certo (a skill está em `.claude/`) — só a pasta temporária ficou travada por algum
+> processo (antivírus/Explorer). Feche o que estiver acessando a pasta e apague `.skill-tmp`
+> manualmente; não precisa rodar o clone de novo.
+
 > **Para atualizar:** rode o mesmo comando de novo. Para mais detalhes (alternativas, contribuir melhorias), veja [INFORMACOES.md](./INFORMACOES.md).
 
 ### 3. Abra o Claude Code
