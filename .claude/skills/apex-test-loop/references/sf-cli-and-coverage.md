@@ -122,8 +122,12 @@ Como ler:
 
 ## 4) Confirmacao oficial de deployabilidade (Portão 2 — UMA vez, ao final)
 
+> **v3:** no loop normal voce NAO roda isto na mao — o `apex-coverage.mjs --gate`
+> dispara o Portão 2 automaticamente quando o Portão 1 bate `>=99%`. Os comandos abaixo
+> sao o que o `--gate` roda por baixo (e o fallback `--validate` avulso, para depurar).
+
 Depois que o loop bate o Portão 1 (`>=99%` via `apex run test`, sem falhas nem testes
-lentos), rode a **validacao oficial de deploy** uma unica vez. E o mesmo gate que a
+lentos), roda-se a **validacao oficial de deploy** uma unica vez. E o mesmo gate que a
 Salesforce aplica a um deploy real: para deployar uma classe, **o que prevalece e a
 cobertura** — este comando confirma que o conjunto DEPLOYARIA em producao, nao apenas
 que "os testes passaram".

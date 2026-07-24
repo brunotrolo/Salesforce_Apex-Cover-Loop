@@ -28,28 +28,32 @@ reinterpreta estas regras. Se uma regra precisar mudar, muda-se **aqui**, uma ve
 coveredPercent >= 99  E  failures == []  E  slowTests == []
 ```
 
-**Portão 2 — confirmação oficial de deployabilidade (UMA vez, só ao bater o
-Portão 1):** o loop NÃO conclui direto no Portão 1. Quando o Portão 1 é atingido, você
-roda a **validação oficial de deploy** — o mesmo gate que a Salesforce aplica a um deploy
-real de produção (cobertura é o que prevalece para deployar, não só "os testes passaram"):
+**Portão 2 — confirmação oficial de deployabilidade (automática ao bater o Portão 1):**
+o loop NÃO conclui direto no Portão 1. É a **validação oficial de deploy** — o mesmo gate
+que a Salesforce aplica a um deploy real de produção (cobertura é o que prevalece para
+deployar, não só "os testes passaram"): `sf project deploy validate --test-level
+RunSpecifiedTests`, **check-only** (simula o deploy inteiro e NÃO grava nada na org),
+incluindo a classe de produção + a de teste no `--metadata`.
+
+**Mecanismo (v3): o `--gate` roda os dois portões numa chamada só e dispara o Portão 2
+AUTOMATICAMENTE quando o Portão 1 passa** — não há como chegar aos 99% sem o validate
+rodar. O comando do loop é:
 
 ```bash
-node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs \
-  --class <Classe> --test <Classe>Test --validate [--org <alias>] [--extra ...]
+node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs --class <Classe> --test <Classe>Test --gate [--org <alias>]
 ```
 
-Isso executa `sf project deploy validate --test-level RunSpecifiedTests` — é
-**check-only** (simula o deploy inteiro e NÃO grava nada na org), incluindo a classe
-de produção + a de teste no `--metadata`. O loop só declara `concluido` quando:
+Ele emite `phase: "gate"` com `verdict`: `continuar` (Portão 1 ainda não passou — não
+roda o validate, poupa tempo), `concluido` (os dois portões confirmados) ou `bloqueado`.
+O loop só declara `concluido` com **`verdict: "concluido"`**, o que exige:
 
 ```
 deployWouldSucceed == true  E  coveredPercent >= 99  E  failures == []
 ```
 
-vindo do `phase: "validate"`. Se o Portão 2 falhar (ex.: a cobertura agregada da org
-ficou abaixo do mínimo, ou uma dependência derruba a validação) apesar do Portão 1 ter
-passado, isso NÃO é conclusão — é `continuar`/`bloqueado`, e o motivo real vem em
-`validateError`.
+Se o Portão 2 falhar (ex.: a cobertura agregada da org ficou abaixo do mínimo, ou uma
+dependência derruba a validação) apesar do Portão 1 ter passado, isso NÃO é conclusão — o
+`--gate` devolve `continuar`/`bloqueado` com o motivo real em `reason`/`validateError`.
 
 **Caso `coverageUnreadable`:** algumas versões do `sf` não expõem a cobertura no JSON do
 `deploy validate`. Nesse caso o script emite `coverageUnreadable: true` (e `coveredPercent`

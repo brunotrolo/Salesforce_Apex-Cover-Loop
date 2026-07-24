@@ -1,33 +1,28 @@
 #!/usr/bin/env node
 // apex-coverage.mjs
 // ---------------------------------------------------------------------------
-// Deploy (opcional) + roda UMA classe de teste Apex com cobertura via o
-// Salesforce CLI (sf) e imprime um JSON compacto com as LINHAS NAO COBERTAS
-// da classe de producao sob teste.
+// Sinal DETERMINISTICO do loop apex-test-loop: roda o(s) comando(s) `sf` certo(s),
+// parseia o JSON gigante e imprime um resumo compacto (coveredPercent, linhas nao
+// cobertas, falhas, portoes). O agente NUNCA deve improvisar `sf` na mao — este
+// script existe justamente para evitar isso (flags alucinadas, JSON parseado errado).
 //
-// E o "sinal deterministico" do loop da skill apex-test-loop: em vez de o
-// agente ler um JSON gigante do sf, ele le algo como:
-//   { "coveredPercent": 84, "uncoveredLines": [12,13,45], "failures": [] }
+// MODO RECOMENDADO — `--gate` (um comando so, o padrao do loop):
+//   node apex-coverage.mjs --class MinhaClasse --test MinhaClasseTest --gate [--org alias] [--extra ...]
+//   Faz, em sequencia: deploy da classe de TESTE -> roda o teste (Portao 1) -> e, SO
+//   se o Portao 1 passar (>=99%, sem falhas, sem testes lentos), roda automaticamente
+//   o `deploy validate` (Portao 2, check-only). Emite um veredito unico:
+//     { phase:"gate", verdict:"continuar"|"concluido"|"bloqueado", portao1:{...}, portao2:{...} }
+//   Assim o modelo nao tem como pular o Portao 2 nem orquestrar `sf` na mao.
 //
-// Uso:
-//   node apex-coverage.mjs --class MinhaClasse [--test MinhaClasseTest] \
-//        [--org alias] [--test-only | --deploy] [--extra ApexClass:TestDataFactory,...] \
-//        [--slow-ms 8000]
-//   --test-only  deploya SOMENTE a classe de teste (PADRAO recomendado do loop).
+// MODOS GRANULARES (avancado / depuracao):
+//   --test-only  deploya SOMENTE a classe de teste + roda o teste (Portao 1 cru).
 //   --deploy     deploya producao + teste (so se a producao for nova/alterada).
-//   (sem --test-only nem --deploy: nao deploya — so mede o que JA esta na org.)
-//   --validate   CONFIRMACAO OFICIAL de deployabilidade (check-only, nao grava na
-//                org): `sf project deploy validate --test-level RunSpecifiedTests`.
-//                Rode UMA vez ao FINAL do loop (nao a cada iteracao). Emite
-//                { phase:"validate", deployWouldSucceed, coveredPercent, ... }.
-//   --slow-ms N  limiar (ms) para sinalizar metodos LENTOS/FRAGEIS em "slowTests"
-//                (padrao 8000). Fragilidade de CPU latente, nao falha — ver SKILL.md.
+//   --validate   so o Portao 2 (deploy validate check-only), sem deploy/teste antes.
+//   (sem flag de modo: nao deploya — so mede o que JA esta na org.)
+//   --slow-ms N  limiar (ms) para sinalizar metodos LENTOS/FRAGEIS em "slowTests" (8000).
 //
-// IMPORTANTE (constraint do Salesforce): testes Apex SEMPRE rodam na ORG, nunca
-// na maquina local. Para a org executar um teste NOVO/ALTERADO, o codigo do teste
-// PRECISA ser deployado antes (senao a org roda a versao antiga). Por isso o loop
-// deploya a classe de teste (--test-only) a cada iteracao em que o teste muda.
-//
+// IMPORTANTE (constraint do Salesforce): testes Apex SEMPRE rodam na ORG. Para a org
+// executar um teste NOVO/ALTERADO, o codigo do teste PRECISA ser deployado antes.
 // Requisitos: sf CLI instalado e autenticado; Node 18+.
 // ---------------------------------------------------------------------------
 
@@ -43,33 +38,22 @@ function arg(name, def = undefined) {
 const className = arg('class');
 const testName = arg('test') || (className ? `${className}Test` : undefined);
 const org = arg('org');
+const gate = !!arg('gate', false); // um-comando-so: deploy -> teste -> (validate se P1)
 const doDeploy = !!arg('deploy', false); // deploy classe de producao + teste
-const testOnly = !!arg('test-only', false); // deploy SOMENTE a classe de teste (recomendado)
+const testOnly = !!arg('test-only', false); // deploy SOMENTE a classe de teste
+const doValidate = !!arg('validate', false); // so o Portao 2
 const extra = arg('extra'); // "ApexClass:Foo,ApexClass:Bar"
 // Limiar (ms de wall-clock) acima do qual um metodo de teste e sinalizado como
-// LENTO/FRAGIL. Nao e CPU exato (RunTime inclui DML/SOQL que nao contam CPU), mas e
-// o melhor proxy deterministico disponivel no JSON do run: metodos lentos costumam
-// ser os que "raspam" o limite de CPU e falham INTERMITENTEMENTE conforme a carga da
-// org (mesma suite pode falhar 17 numa org cheia e 1 numa vazia). Ajustavel: --slow-ms N.
+// LENTO/FRAGIL. Nao e CPU exato, mas e o melhor proxy deterministico: metodos lentos
+// costumam "raspar" o limite de CPU e falhar INTERMITENTEMENTE conforme a carga da org.
 const slowMs = Number(arg('slow-ms', 8000)) || 8000;
 const willDeploy = doDeploy || testOnly;
 
-if (!className || !testName) {
-  console.error(
-    'Uso: node apex-coverage.mjs --class <ApexClass> [--test <TestClass>] ' +
-      '[--org <alias>] [--test-only | --deploy] [--extra ApexClass:Foo,ApexClass:Bar]\n' +
-      '  --test-only  deploy SOMENTE a classe de teste (recomendado: a classe de\n' +
-      '               producao ja esta na org e NAO deve ser reenviada/sobrescrita).\n' +
-      '  --deploy     deploy da classe de producao + teste (use so se a classe de\n' +
-      '               producao e nova ou mudou legitimamente).'
-  );
-  process.exit(2);
-}
-
 const orgArgs = org ? ['--target-org', org] : [];
+const extraMeta =
+  typeof extra === 'string' ? extra.split(',').map((m) => m.trim()).filter(Boolean) : [];
 
 // No Windows o sf e um .cmd, e o Node moderno exige shell para executa-lo.
-// (Os args aqui sao nomes de classe/alias simples — sem risco de quoting.)
 const IS_WINDOWS = process.platform === 'win32';
 
 function runSf(args) {
@@ -109,63 +93,88 @@ function emit(obj, exitCode) {
   process.exit(exitCode);
 }
 
-// ---------------------------------------------------------------------------
-// 0) MODO VALIDACAO OFICIAL (--validate): confirmacao de DEPLOYABILIDADE.
-//    Roda `sf project deploy validate` (CHECK-ONLY: simula o deploy inteiro e NAO
-//    grava nada na org) com --test-level RunSpecifiedTests. Este e o MESMO gate
-//    que a Salesforce aplica a um deploy real: se a cobertura nao bater o minimo
-//    exigido pela org, a validacao FALHA. E o criterio de verdade "isso deployaria
-//    em producao?", nao apenas "os testes passaram".
-//    USO NO LOOP: NAO rode isto a cada iteracao (e mais pesado). Rode UMA vez, ao
-//    FINAL, quando o loop achar que ja bateu >=99% via `apex run test` — como
-//    confirmacao oficial antes de declarar `concluido`. Inclui a classe de
-//    PRODUCAO + a de TESTE no --metadata (validate e check-only, nao sobrescreve
-//    nada), replicando o comando que os devs usam para liberar em producao.
-// ---------------------------------------------------------------------------
-const doValidate = !!arg('validate', false);
-if (doValidate) {
-  const meta = [`ApexClass:${className}`, `ApexClass:${testName}`];
-  if (typeof extra === 'string') {
-    for (const m of extra.split(',')) if (m.trim()) meta.push(m.trim());
+// ===========================================================================
+// PARSERS PUROS (compartilhados por todos os modos — uma fonte de verdade)
+// ===========================================================================
+
+// Cobertura da classe alvo a partir da estrutura estilo `apex run test`
+// (covList = result.coverage.coverage[] com item.lines { "3":1, "7":0 }).
+export function extractClassCoverage(covListRaw, targetClass) {
+  const covList = Array.isArray(covListRaw?.coverage)
+    ? covListRaw.coverage
+    : Array.isArray(covListRaw)
+      ? covListRaw
+      : [];
+  const entry = covList.find((c) => (c.name || c.Name) === targetClass);
+  const other = covList
+    .filter((c) => (c.name || c.Name) !== targetClass)
+    .map((c) => ({ name: c.name || c.Name, coveredPercent: c.coveredPercent }));
+  if (!entry) {
+    return {
+      coverageFound: false,
+      coveredPercent: null,
+      uncoveredLines: [],
+      totalLines: null,
+      coveredLines: null,
+      otherClassesTouched: other,
+      available: covList.map((c) => c.name || c.Name),
+    };
   }
-  const vArgs = ['project', 'deploy', 'validate'];
-  for (const m of meta) vArgs.push('--metadata', m);
-  vArgs.push(
-    '--test-level',
-    'RunSpecifiedTests',
-    '--tests',
-    testName,
-    '--coverage-formatters',
-    'json',
-    '--json',
-    ...orgArgs
-  );
+  const lines = entry.lines || {};
+  const nums = Object.keys(lines);
+  const uncoveredLines = nums
+    .filter((n) => Number(lines[n]) === 0)
+    .map(Number)
+    .sort((a, b) => a - b);
+  const totalLines = entry.totalLines ?? nums.length;
+  const coveredLines = entry.totalCovered ?? nums.length - uncoveredLines.length;
+  const coveredPercent =
+    entry.coveredPercent ?? (totalLines ? Math.round((coveredLines / totalLines) * 100) : null);
+  return {
+    coverageFound: true,
+    coveredPercent,
+    uncoveredLines,
+    totalLines,
+    coveredLines,
+    otherClassesTouched: other,
+    available: null,
+  };
+}
 
-  const v = runSf(vArgs);
-  const vj = parseJsonLoose(v.stdout || '');
-  const result = vj?.result || {};
-  const wouldSucceed = v.status === 0 && vj && vj.status === 0;
+export function extractTestFailures(tests, testName) {
+  return (tests || [])
+    .filter((x) => (x.Outcome || x.outcome) !== 'Pass')
+    .map((x) => ({
+      method: `${x.ApexClass?.Name || x.apexClass?.name || testName}.${x.MethodName || x.methodName}`,
+      message: x.Message || x.message,
+      stackTrace: x.StackTrace || x.stackTrace,
+    }));
+}
 
-  const rtr = result.details?.runTestResult || result.runTestResult || {};
+export function extractSlowTests(tests, testName, limitMs) {
+  return (tests || [])
+    .map((x) => ({
+      method: `${x.ApexClass?.Name || x.apexClass?.name || testName}.${x.MethodName || x.methodName}`,
+      runtimeMs: Number(x.RunTime ?? x.runTime ?? x.runtime ?? 0),
+    }))
+    .filter((x) => Number.isFinite(x.runtimeMs) && x.runtimeMs >= limitMs)
+    .sort((a, b) => b.runtimeMs - a.runtimeMs);
+}
 
-  // A cobertura do `deploy validate --json` pode vir em MAIS DE UMA estrutura,
-  // dependendo da versao do sf e das flags (--coverage-formatters). NAO assumimos
-  // uma so — tentamos as conhecidas e, se NENHUMA casar, sinalizamos
-  // `coverageUnreadable` em vez de fingir 0/100 (isso travava/confundia o loop):
-  //   (a) Metadata API: rtr.codeCoverage[] com numLocations/numLocationsNotCovered/
-  //       locationsNotCovered[].line
-  //   (b) estilo `apex run test`: coverage[].lines { "3":1, "7":0 } (quando o
-  //       coverage-formatters injeta o relatorio no result)
+// Cobertura do `deploy validate --json`: tenta a estrutura da Metadata API e, se
+// nao casar, a estrutura estilo `apex run test`. Se nenhuma casar -> coverageUnreadable.
+export function extractValidateCoverage(result, targetClass) {
+  const rtr = result?.details?.runTestResult || result?.runTestResult || {};
   let coveredPercent = null;
   let uncoveredLines = [];
 
-  // (a) estrutura da Metadata API (a mais comum no deploy validate)
+  // (a) Metadata API: codeCoverage[] com numLocations / locationsNotCovered[].line
   const covA = Array.isArray(rtr.codeCoverage)
     ? rtr.codeCoverage
     : rtr.codeCoverage
       ? [rtr.codeCoverage]
       : [];
-  const entryA = covA.find((c) => (c.name || c.Name) === className);
+  const entryA = covA.find((c) => (c.name || c.Name) === targetClass);
   if (entryA && entryA.numLocations != null) {
     const total = Number(entryA.numLocations ?? 0);
     const notCovered = Number(entryA.numLocationsNotCovered ?? 0);
@@ -177,266 +186,367 @@ if (doValidate) {
       .sort((a, b) => a - b);
   }
 
-  // (b) fallback: estrutura estilo `apex run test` (mapa de linhas), em varios
-  //     caminhos possiveis do JSON.
+  // (b) fallback: estrutura estilo `apex run test` (mapa de linhas)
   if (coveredPercent == null) {
     const covBraw =
-      result.coverage?.coverage || result.details?.coverage?.coverage || result.coverage || [];
-    const covB = Array.isArray(covBraw) ? covBraw : [];
-    const entryB = covB.find((c) => (c.name || c.Name) === className);
-    if (entryB) {
-      const lines = entryB.lines || {};
-      const nums = Object.keys(lines);
-      if (nums.length) {
-        uncoveredLines = nums
-          .filter((n) => Number(lines[n]) === 0)
-          .map(Number)
-          .sort((a, b) => a - b);
-        const totalLines = entryB.totalLines ?? nums.length;
-        const coveredLines = entryB.totalCovered ?? nums.length - uncoveredLines.length;
-        coveredPercent =
-          entryB.coveredPercent ?? (totalLines ? Math.round((coveredLines / totalLines) * 100) : null);
-      } else if (entryB.coveredPercent != null) {
-        coveredPercent = Number(entryB.coveredPercent);
-      }
+      result?.coverage?.coverage || result?.details?.coverage?.coverage || result?.coverage || [];
+    const cov = extractClassCoverage(covBraw, targetClass);
+    if (cov.coverageFound) {
+      coveredPercent = cov.coveredPercent;
+      uncoveredLines = cov.uncoveredLines;
     }
   }
 
-  const coverageUnreadable = coveredPercent == null;
-
   const rtFailures = Array.isArray(rtr.failures) ? rtr.failures : rtr.failures ? [rtr.failures] : [];
   const failures = rtFailures.map((f) => ({
-    method: `${f.name || testName}.${f.methodName || ''}`,
+    method: `${f.name || ''}.${f.methodName || ''}`,
     message: f.message,
     stackTrace: f.stackTrace,
   }));
 
-  emit(
-    {
-      phase: 'validate',
-      // A pergunta de verdade: este conjunto DEPLOYARIA em producao?
-      deployWouldSucceed: wouldSucceed,
-      class: className,
-      coveredPercent,
-      // true quando o validate rodou mas a cobertura NAO pode ser lida do JSON
-      // (versao/estrutura do sf diferente). O loop NAO deve concluir cegamente:
-      // use o coveredPercent do Portao 1 (apex run test) para o criterio de 99%.
-      coverageUnreadable: coverageUnreadable || undefined,
-      uncoveredLines,
-      testsRan: Number(rtr.numTestsRun ?? 0) || undefined,
-      failing: Number(rtr.numFailures ?? failures.length) || 0,
-      failures,
-      // Quando a validacao falha sem ser por teste (ex.: cobertura da ORG toda
-      // abaixo do minimo, dependencia ausente), o motivo vem aqui.
-      validateError: wouldSucceed
-        ? undefined
-        : vj?.message || result.errorMessage || 'Validacao de deploy falhou. Veja "raw".',
-      hint:
-        wouldSucceed && coverageUnreadable
-          ? 'deploy validate PASSOU (deployWouldSucceed=true), mas a cobertura nao pode ser ' +
-            'lida do JSON do validate nesta versao do sf. NAO trave nem conclua as cegas: o ' +
-            'Portao 2 confirma a DEPLOYABILIDADE; para o criterio de >=99% use o coveredPercent ' +
-            'ja confirmado no Portao 1 (apex run test). Veja "raw" para inspecionar.'
-          : undefined,
-      // Em falha OU cobertura ilegivel, preserve o stdout cru para inspecao.
-      raw:
-        !wouldSucceed || coverageUnreadable
-          ? (v.stdout || v.stderr || '').slice(0, 4000)
-          : undefined,
-    },
-    wouldSucceed && failures.length === 0 && (coveredPercent ?? 0) >= 99 ? 0 : 1
-  );
+  return {
+    coveredPercent,
+    uncoveredLines,
+    coverageUnreadable: coveredPercent == null,
+    failures,
+    testsRan: Number(rtr.numTestsRun ?? 0) || undefined,
+  };
 }
 
-// ---------------------------------------------------------------------------
-// 1) Deploy opcional. Por padrao (--test-only) envia SOMENTE a classe de teste,
-//    porque a classe de producao ja esta na org e nao deve ser reenviada nem
-//    sobrescrita. --deploy (produção + teste) so para classe nova/alterada.
-//    --test-level NoTestRun evita rodar TODOS os testes da org so por deployar
-//    (os testes rodam separadamente no passo 2).
-// ---------------------------------------------------------------------------
-if (willDeploy) {
-  const meta = testOnly
-    ? [`ApexClass:${testName}`]
-    : [`ApexClass:${className}`, `ApexClass:${testName}`];
-  if (typeof extra === 'string') {
-    for (const m of extra.split(',')) if (m.trim()) meta.push(m.trim());
+// Falha de deploy -> { failures[], blockedByDependency, hint }
+function parseDeployFailure(dj, tName) {
+  const result = dj?.result || {};
+  let failures = [];
+  for (const f of result.files || []) {
+    if ((f.state || '').toLowerCase() === 'failed' || f.error) {
+      failures.push({
+        file: f.fullName || f.filePath,
+        line: f.lineNumber,
+        column: f.columnNumber,
+        problem: f.error || f.problemType,
+      });
+    }
   }
+  if (!failures.length) {
+    const cf = result.details?.componentFailures || result.componentFailures || [];
+    for (const f of Array.isArray(cf) ? cf : [cf]) {
+      if (f && f.problem) {
+        failures.push({ file: f.fullName || f.fileName, line: f.lineNumber, problem: f.problem });
+      }
+    }
+  }
+  const testFile = tName.toLowerCase();
+  const testCaused = failures.some((f) => String(f.file || '').toLowerCase().includes(testFile));
+  const prodOrDepCaused = failures.some(
+    (f) => !String(f.file || '').toLowerCase().includes(testFile)
+  );
+  const blockedByDependency = prodOrDepCaused && !testCaused;
+  return {
+    failures: failures.length ? failures : [{ problem: dj?.message || 'Deploy falhou. Veja "raw".' }],
+    blockedByDependency,
+    hint: blockedByDependency
+      ? 'A falha NAO e da classe de teste, e de uma dependencia (objeto __c, Custom ' +
+        'Metadata __mdt, ou outra classe) ausente. NUNCA recrie/apague/sobrescreva a ' +
+        'CLASSE SOB TESTE. Uso real: ofereca (a) rodar so o teste se a producao ja estiver ' +
+        'na org; (b) "sf project retrieve start"; (c) apontar a org certa. Dev/treino sem a ' +
+        'org: com --scaffold, crie o MINIMO das dependencias como arquivos NOVOS — veja ' +
+        'references/scaffolding-dependencies.md.'
+      : 'Erro provavelmente na classe de TESTE — ajuste o teste e rode de novo.',
+  };
+}
+
+// ===========================================================================
+// RUNNERS (executam o `sf` e devolvem struct parseada)
+// ===========================================================================
+
+// Deploy. includeProduction=false -> SOMENTE a classe de teste (padrao seguro).
+// Para o deploy so-da-classe-de-teste, --ignore-conflicts e seguro (arquivo que o
+// proprio loop controla) e evita o erro de source-tracking visto em campo. NUNCA com
+// a producao no payload.
+function runDeploy(includeProduction) {
+  const meta = includeProduction
+    ? [`ApexClass:${className}`, `ApexClass:${testName}`]
+    : [`ApexClass:${testName}`];
+  meta.push(...extraMeta);
   const dArgs = ['project', 'deploy', 'start'];
   for (const m of meta) dArgs.push('--metadata', m);
   dArgs.push('--test-level', 'NoTestRun', '--json', ...orgArgs);
+  if (!includeProduction) dArgs.push('--ignore-conflicts');
 
   const d = runSf(dArgs);
   const dj = parseJsonLoose(d.stdout || '');
-  const deployOk = d.status === 0 && dj && dj.status === 0;
+  const ok = d.status === 0 && dj && dj.status === 0;
+  if (ok) return { ok: true };
+  return {
+    ok: false,
+    ...parseDeployFailure(dj, testName),
+    raw: (d.stdout || d.stderr || '').slice(0, 4000),
+  };
+}
 
-  if (!deployOk) {
-    let failures = [];
-    const result = dj?.result || {};
+// Roda o teste com cobertura (Portao 1).
+function runTests() {
+  const tArgs = [
+    'apex', 'run', 'test',
+    '--class-names', testName,
+    '--code-coverage',
+    '--result-format', 'json',
+    '--synchronous',
+    '--wait', '10',
+    ...orgArgs,
+  ];
+  const t = runSf(tArgs);
+  const tj = parseJsonLoose(t.stdout || '');
+  if (!tj || !tj.result) {
+    return { hasResult: false, raw: (t.stdout || t.stderr || '').slice(0, 4000) };
+  }
+  const r = tj.result;
+  const summary = r.summary || {};
+  const tests = r.tests || [];
+  const cov = extractClassCoverage(r.coverage, className);
+  return {
+    hasResult: true,
+    summary,
+    failures: extractTestFailures(tests, testName),
+    slowTests: extractSlowTests(tests, testName, slowMs),
+    ...cov,
+    testsRan: summary.testsRan ?? tests.length,
+    passing: summary.passing,
+    failing: summary.failing,
+  };
+}
 
-    // sf moderno: result.files[] com state 'Failed' + error/lineNumber
-    for (const f of result.files || []) {
-      if ((f.state || '').toLowerCase() === 'failed' || f.error) {
-        failures.push({
-          file: f.fullName || f.filePath,
-          line: f.lineNumber,
-          column: f.columnNumber,
-          problem: f.error || f.problemType,
-        });
-      }
-    }
-    // sfdx antigo: result.details.componentFailures
-    if (!failures.length) {
-      const cf = result.details?.componentFailures || result.componentFailures || [];
-      for (const f of Array.isArray(cf) ? cf : [cf]) {
-        if (f && f.problem) {
-          failures.push({ file: f.fullName || f.fileName, line: f.lineNumber, problem: f.problem });
-        }
-      }
-    }
+// Roda o Portao 2 (deploy validate check-only).
+function runValidate() {
+  const meta = [`ApexClass:${className}`, `ApexClass:${testName}`, ...extraMeta];
+  const vArgs = ['project', 'deploy', 'validate'];
+  for (const m of meta) vArgs.push('--metadata', m);
+  vArgs.push(
+    '--test-level', 'RunSpecifiedTests',
+    '--tests', testName,
+    '--coverage-formatters', 'json',
+    '--json',
+    ...orgArgs
+  );
+  const v = runSf(vArgs);
+  const vj = parseJsonLoose(v.stdout || '');
+  const result = vj?.result || {};
+  const deployWouldSucceed = v.status === 0 && vj && vj.status === 0;
+  const cov = extractValidateCoverage(result, className);
+  return {
+    deployWouldSucceed,
+    ...cov,
+    validateError: deployWouldSucceed
+      ? undefined
+      : vj?.message || result.errorMessage || 'Validacao de deploy falhou. Veja "raw".',
+    raw:
+      !deployWouldSucceed || cov.coverageUnreadable
+        ? (v.stdout || v.stderr || '').slice(0, 4000)
+        : undefined,
+  };
+}
 
-    // A falha e "culpa" do teste, ou de dependencia/classe de producao?
-    const testFile = testName.toLowerCase();
-    const testCaused = failures.some((f) => String(f.file || '').toLowerCase().includes(testFile));
-    const prodOrDepCaused = failures.some(
-      (f) => !String(f.file || '').toLowerCase().includes(testFile)
+// ===========================================================================
+// MODOS (rodam so quando o script e chamado direto — nao ao importar p/ teste)
+// ===========================================================================
+function main() {
+  if (!className || !testName) {
+    console.error(
+      'Uso: node apex-coverage.mjs --class <ApexClass> [--test <TestClass>] [--org <alias>]\n' +
+        '  --gate       RECOMENDADO: deploy -> teste (Portao 1) -> validate (Portao 2 se P1 passar).\n' +
+        '  --test-only  deploy SOMENTE a classe de teste + roda o teste.\n' +
+        '  --deploy     deploy producao + teste (so se a producao e nova/alterada).\n' +
+        '  --validate   so o Portao 2 (deploy validate check-only).'
     );
+    process.exit(2);
+  }
 
+// --- MODO --gate (RECOMENDADO): deploy -> teste -> (validate se Portao 1) ----
+if (gate) {
+  const dep = runDeploy(false);
+  if (!dep.ok) {
+    emit(
+      {
+        phase: 'gate',
+        verdict: dep.blockedByDependency ? 'bloqueado' : 'continuar',
+        deploy: { succeeded: false, deployErrors: dep.failures, blockedByDependency: dep.blockedByDependency },
+        reason: dep.hint,
+        raw: dep.raw,
+      },
+      1
+    );
+  }
+
+  const test = runTests();
+  if (!test.hasResult) {
+    emit(
+      {
+        phase: 'gate',
+        verdict: 'continuar',
+        reason: 'Nao foi possivel ler o resultado do teste a partir da saida do sf.',
+        raw: test.raw,
+      },
+      1
+    );
+  }
+
+  const p1pass =
+    test.coverageFound &&
+    (test.coveredPercent ?? 0) >= 99 &&
+    test.failures.length === 0 &&
+    test.slowTests.length === 0;
+
+  const portao1 = {
+    passed: p1pass,
+    coveredPercent: test.coveredPercent,
+    uncoveredLines: test.uncoveredLines,
+    failures: test.failures,
+    slowTests: test.slowTests.length ? test.slowTests : undefined,
+    coverageFound: test.coverageFound,
+    availableCoverage: test.coverageFound ? undefined : test.available,
+    otherClassesTouched: test.otherClassesTouched.length ? test.otherClassesTouched : undefined,
+  };
+
+  if (!p1pass) {
+    // Portao 1 nao passou -> continuar; NAO roda o Portao 2 (caro) ainda.
+    let reason;
+    if (!test.coverageFound) reason = 'A classe alvo nao apareceu na cobertura — confira o nome exato.';
+    else if (test.failures.length) reason = `${test.failures.length} teste(s) falhando — corrija antes de seguir.`;
+    else if (test.slowTests.length) reason = 'Ha teste(s) lento(s) (>=8s) — divida com startTest/stopTest antes de concluir.';
+    else reason = `Cobertura ${test.coveredPercent}% < 99% — cubra as uncoveredLines restantes.`;
+    emit({ phase: 'gate', verdict: 'continuar', portao1, portao2: null, reason }, 1);
+  }
+
+  // Portao 1 passou -> roda o Portao 2 AUTOMATICAMENTE (uma vez).
+  const val = runValidate();
+  const p2pass =
+    val.deployWouldSucceed &&
+    val.failures.length === 0 &&
+    ((val.coveredPercent ?? 0) >= 99 || val.coverageUnreadable);
+
+  const portao2 = {
+    ran: true,
+    deployWouldSucceed: val.deployWouldSucceed,
+    coveredPercent: val.coveredPercent,
+    coverageUnreadable: val.coverageUnreadable || undefined,
+    failures: val.failures.length ? val.failures : undefined,
+    validateError: val.validateError,
+    raw: val.raw,
+  };
+
+  if (p2pass) {
+    emit(
+      {
+        phase: 'gate',
+        verdict: 'concluido',
+        portao1,
+        portao2,
+        reason: val.coverageUnreadable
+          ? 'Portao 1 >=99% e Portao 2 confirmou deployabilidade (cobertura do validate ilegivel — usei o Portao 1).'
+          : 'Ambos os portoes confirmados: >=99% e deployWouldSucceed=true.',
+      },
+      0
+    );
+  }
+  emit(
+    {
+      phase: 'gate',
+      // deployWouldSucceed=false pode ser limitacao de ambiente (cobertura agregada da
+      // org, dependencia) -> pode ser 'bloqueado' (decisao humana). O agente decide via
+      // loop-rules; aqui devolvemos 'continuar' com o motivo real a vista.
+      verdict: 'continuar',
+      portao1,
+      portao2,
+      reason:
+        val.validateError ||
+        `Portao 2 nao confirmou (deployWouldSucceed=${val.deployWouldSucceed}, coveredPercent=${val.coveredPercent}).`,
+    },
+    1
+  );
+}
+
+// --- MODO --validate: so o Portao 2 ----------------------------------------
+if (doValidate) {
+  const val = runValidate();
+  emit(
+    {
+      phase: 'validate',
+      deployWouldSucceed: val.deployWouldSucceed,
+      class: className,
+      coveredPercent: val.coveredPercent,
+      coverageUnreadable: val.coverageUnreadable || undefined,
+      uncoveredLines: val.uncoveredLines,
+      testsRan: val.testsRan,
+      failing: val.failures.length,
+      failures: val.failures,
+      validateError: val.validateError,
+      hint:
+        val.deployWouldSucceed && val.coverageUnreadable
+          ? 'deploy validate PASSOU, mas a cobertura nao pode ser lida do JSON nesta versao do ' +
+            'sf. NAO conclua as cegas: use o coveredPercent do Portao 1 (apex run test) para o >=99%.'
+          : undefined,
+      raw: val.raw,
+    },
+    val.deployWouldSucceed && val.failures.length === 0 && (val.coveredPercent ?? 0) >= 99 ? 0 : 1
+  );
+}
+
+// --- MODO deploy+teste (--test-only / --deploy) ou so-medir -----------------
+if (willDeploy) {
+  const dep = runDeploy(doDeploy); // doDeploy=true inclui producao
+  if (!dep.ok) {
     emit(
       {
         phase: 'deploy',
         deploySucceeded: false,
-        deployErrors: failures.length
-          ? failures
-          : [{ problem: dj?.message || 'Deploy falhou. Veja "raw".' }],
-        // Sinaliza para o agente NAO recriar/apagar/stubar a classe de producao.
-        blockedByDependency: prodOrDepCaused && !testCaused,
-        hint:
-          prodOrDepCaused && !testCaused
-            ? 'A falha NAO e da classe de teste, e de uma dependencia (objeto __c, ' +
-              'Custom Metadata __mdt, ou outra classe) ausente. NUNCA recrie/apague/' +
-              'sobrescreva a CLASSE SOB TESTE. Uso real: ofereca (a) rodar so o teste se ' +
-              'a producao ja estiver na org; (b) "sf project retrieve start"; (c) apontar ' +
-              'a org certa. Dev/treino sem a org: com sinal do usuario (--scaffold), crie o ' +
-              'MINIMO das dependencias como arquivos NOVOS (__c/__mdt sao metadata XML, nao ' +
-              'Apex) — veja references/scaffolding-dependencies.md.'
-            : 'Erro provavelmente na classe de TESTE — ajuste o teste e rode de novo.',
-        raw: failures.length ? undefined : (d.stdout || d.stderr || '').slice(0, 4000),
+        deployErrors: dep.failures,
+        blockedByDependency: dep.blockedByDependency,
+        hint: dep.hint,
+        raw: dep.raw,
       },
       1
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// 2) Roda a classe de teste com cobertura, de forma sincrona
-// ---------------------------------------------------------------------------
-const tArgs = [
-  'apex',
-  'run',
-  'test',
-  '--class-names',
-  testName,
-  '--code-coverage',
-  '--result-format',
-  'json',
-  '--synchronous',
-  '--wait',
-  '10',
-  ...orgArgs,
-];
-
-const t = runSf(tArgs);
-const tj = parseJsonLoose(t.stdout || '');
-
-if (!tj || !tj.result) {
+const test = runTests();
+if (!test.hasResult) {
   emit(
     {
       phase: 'test',
       error: 'Nao foi possivel ler o resultado do teste a partir da saida do sf.',
-      raw: (t.stdout || t.stderr || '').slice(0, 4000),
+      raw: test.raw,
     },
     1
   );
-}
-
-const r = tj.result;
-const summary = r.summary || {};
-const tests = r.tests || [];
-
-const failures = tests
-  .filter((x) => (x.Outcome || x.outcome) !== 'Pass')
-  .map((x) => ({
-    method: `${x.ApexClass?.Name || x.apexClass?.name || testName}.${x.MethodName || x.methodName}`,
-    message: x.Message || x.message,
-    stackTrace: x.StackTrace || x.stackTrace,
-  }));
-
-// Sinal de FRAGILIDADE (nao e falha): metodos cujo tempo de execucao passa de
-// `slowMs`. Sao os candidatos a estourar CPU de forma INTERMITENTE numa org
-// carregada — mesmo passando agora. O loop deve trata-los como deploy-blockers
-// latentes (dividir em grupos menores com startTest/stopTest proprio) ANTES de
-// declarar a classe pronta. Veja SKILL.md (passo 4) e runtime-blockers.md (secao 1).
-const slowTests = tests
-  .map((x) => ({
-    method: `${x.ApexClass?.Name || x.apexClass?.name || testName}.${x.MethodName || x.methodName}`,
-    runtimeMs: Number(x.RunTime ?? x.runTime ?? x.runtime ?? 0),
-  }))
-  .filter((x) => Number.isFinite(x.runtimeMs) && x.runtimeMs >= slowMs)
-  .sort((a, b) => b.runtimeMs - a.runtimeMs);
-
-// Localiza a cobertura da classe sob teste
-const covListRaw = r.coverage?.coverage || r.coverage || [];
-const covList = Array.isArray(covListRaw) ? covListRaw : [];
-const entry = covList.find((c) => (c.name || c.Name) === className);
-
-// Cobertura colateral: outras classes/triggers executadas por este teste.
-// Util para o agente saber que uma trigger/helper tambem foi exercitada.
-const otherClassesTouched = covList
-  .filter((c) => (c.name || c.Name) !== className)
-  .map((c) => ({ name: c.name || c.Name, coveredPercent: c.coveredPercent }));
-
-let coveredPercent = null;
-let totalLines = null;
-let coveredLines = null;
-let uncoveredLines = [];
-
-if (entry) {
-  const lines = entry.lines || {};
-  const nums = Object.keys(lines);
-  uncoveredLines = nums
-    .filter((n) => Number(lines[n]) === 0)
-    .map(Number)
-    .sort((a, b) => a - b);
-  totalLines = entry.totalLines ?? nums.length;
-  coveredLines = entry.totalCovered ?? nums.length - uncoveredLines.length;
-  coveredPercent =
-    entry.coveredPercent ?? (totalLines ? Math.round((coveredLines / totalLines) * 100) : null);
 }
 
 emit(
   {
     phase: 'test',
     deploySucceeded: willDeploy ? true : undefined,
-    testOutcome: summary.outcome || (failures.length ? 'Failed' : 'Passed'),
-    testsRan: summary.testsRan ?? tests.length,
-    passing: summary.passing,
-    failing: summary.failing ?? failures.length,
-    failures,
-    // Metodos lentos (>= slowMs) — fragilidade de CPU latente, NAO falha. Dividir
-    // antes de concluir (passo 4 do SKILL.md). Ausente quando nenhum passou do limiar.
-    slowTests: slowTests.length ? slowTests : undefined,
-    slowMs: slowTests.length ? slowMs : undefined,
+    testOutcome: test.summary.outcome || (test.failures.length ? 'Failed' : 'Passed'),
+    testsRan: test.testsRan,
+    passing: test.passing,
+    failing: test.failing ?? test.failures.length,
+    failures: test.failures,
+    slowTests: test.slowTests.length ? test.slowTests : undefined,
+    slowMs: test.slowTests.length ? slowMs : undefined,
     class: className,
-    coverageFound: !!entry,
-    coveredPercent,
-    totalLines,
-    coveredLines,
-    uncoveredLines,
-    // Se a classe nao apareceu na cobertura, liste o que apareceu (ajuda a
-    // diagnosticar nome errado, trigger, ou teste que nao exercita a classe).
-    availableCoverage: entry ? undefined : covList.map((c) => c.name || c.Name),
-    otherClassesTouched: otherClassesTouched.length ? otherClassesTouched : undefined,
+    coverageFound: test.coverageFound,
+    coveredPercent: test.coveredPercent,
+    totalLines: test.totalLines,
+    coveredLines: test.coveredLines,
+    uncoveredLines: test.uncoveredLines,
+    availableCoverage: test.coverageFound ? undefined : test.available,
+    otherClassesTouched: test.otherClassesTouched.length ? test.otherClassesTouched : undefined,
   },
-  failures.length || !entry ? 1 : 0
+  test.failures.length || !test.coverageFound ? 1 : 0
 );
+}
+
+// So roda a CLI quando executado diretamente pelo agente; ao importar (testes),
+// apenas as funcoes puras exportadas ficam disponiveis.
+import { fileURLToPath } from 'node:url';
+const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (invokedDirectly) main();
