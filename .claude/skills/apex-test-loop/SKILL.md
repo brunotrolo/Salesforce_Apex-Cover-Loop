@@ -63,13 +63,20 @@ drip-feed (deploy prematuro), crítico com modelos menores.
    (linhas/ramos específicos ainda descobertos — nunca "melhore a cobertura" genérico).
    Para o craft (mocks, asserts, data factory, bulk, async), invoque as skills oficiais
    via `Skill` em vez de reinventar. **Nunca** toque na classe de produção.
-2. **Deploy + teste + cobertura.** Rode o script determinístico (redirecione a saída
-   completa para arquivo — **nunca** trunque com `tail`/`head`):
+2. **Deploy + teste + cobertura.** Rode **este script** — é a fonte determinística.
+   Redirecione a saída completa para arquivo (**nunca** trunque com `tail`/`head`):
    ```bash
    node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs \
      --class <Classe> --test <Classe>Test --test-only [--org <alias>] [--extra ApexClass:TestDataFactory] \
      > .apex-test-loop/state/cov-atual.json 2> .apex-test-loop/state/cov-atual.err
    ```
+   > ⛔ **NÃO improvise comandos `sf` na mão** (você vai alucinar flag e perder tempo —
+   > já aconteceu em campo). O script já roda o comando certo e já parseia a cobertura
+   > (a estrutura é `result.coverage.coverage[]`, não `codeCoverage`). Flags que **NÃO
+   > existem** — nunca use: `sf project deploy start --run-tests`/`--code-coverage`
+   > (cobertura vem do `apex run test`, não do deploy) e `sf apex get test --class-names`
+   > (esse comando precisa de `--test-run-id`). Só caia em `sf` cru pelo **fallback** de
+   > `references/sf-cli-and-coverage.md` se o script realmente não rodar.
    ⚠️ **Timeout:** o run é síncrono e testes de callout podem levar vários segundos cada
    — use um timeout generoso (≥ 300s) na chamada do comando. Se o script não puder rodar
    (Node ausente, conflito de formato de source), use o fallback de `references/sf-cli-and-coverage.md`.

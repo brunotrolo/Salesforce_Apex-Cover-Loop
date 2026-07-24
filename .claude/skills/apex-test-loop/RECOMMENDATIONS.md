@@ -365,4 +365,25 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   ganha a trava #7 (allowlist de escrita) como regra positiva na fonte única. Smoke test:
   12 casos, todos passam.
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0046, R-0047... -->
+### R-0046 — Hastear script-first + anti-alucinação de `sf` para dentro do SKILL.md
+- **Status:** 🟢 Aprovada e aplicada
+- **Data:** 2026-07-24
+- **Gatilho:** dois runs em campo (OpenCode/DeepSeek Flash, `invoiceSummary_ctr`)
+  mostraram o modelo **ignorando o `apex-coverage.mjs`** e fazendo `sf` na mão, alucinando
+  flags que a própria skill já documenta como inválidas: `sf apex get test --class-names`
+  (precisa de `--test-run-id`) e `sf project deploy start --run-tests --code-coverage`
+  (não existem). Também parseou a cobertura errado 3x até achar `result.coverage.coverage[]`.
+- **Problema:** os avisos anti-alucinação e o "use o script" viviam SÓ nas referências
+  (`sf-cli-and-coverage.md`), que o modelo fraco não abre. O `SKILL.md` — que carrega
+  junto com a skill — não trazia esse aviso no passo operacional.
+- **Melhoria aplicada:** hasteado para o passo 2 do `SKILL.md` um bloco curto e direto:
+  "rode ESTE script, não improvise `sf`", com as 2 flags alucinadas nomeadas e a
+  estrutura correta do JSON (`result.coverage.coverage[]`). Sem inchar (é hoist de
+  conteúdo que já existia na referência, agora onde o modelo lê).
+- **Expectativa honesta:** eleva o piso, mas não garante — um modelo que ignora
+  instrução pode ignorar esta também. O gargalo segue sendo a capacidade do modelo
+  (DeepSeek Flash freelanca; Claude conduz pela skill). Candidato futuro (opt-in, mais
+  código): modo `--gate` no script que encadeia deploy→teste→validate num comando só,
+  para o modelo não ter como pular o Portão 2 nem orquestrar na mão.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0047, R-0048... -->
