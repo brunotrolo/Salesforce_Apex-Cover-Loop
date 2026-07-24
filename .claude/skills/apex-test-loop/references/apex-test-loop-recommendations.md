@@ -16,7 +16,7 @@ Veja `.claude/skills/apex-test-loop/RECOMMENDATIONS.md` (detalhado). Resumo:
 | R-0012 | ✅ | State file por classe | run-state.md |
 | R-0013 | 🟡 | Plugin do Claude Code | Futuro |
 | R-0014 | ✅ | bypassPermissions mode | settings.json |
-| R-0015 a R-0021 | ✅ | Runtime blockers, fan-out, checkpoint | SKILL.md, parallel-methods.md |
+| R-0015 a R-0021 | ✅ | Runtime blockers, fan-out (opt-in — ver parallel-methods.md), checkpoint | SKILL.md, parallel-methods.md |
 | R-0022 a R-0027 | ✅ | MVP deployable default, circuit-breaker, autonomia, benchmark | SKILL.md, runtime-blockers.md |
 | R-0028 | ✅ | Caminho neutro do state (Claude Code × OpenCode) | run-state.md, SKILL.md |
 | R-0029 | ✅ | Centralizar padrões agnósticos + split de ledgers | references/, SKILL.md, contribution-guidelines.md |
@@ -40,7 +40,10 @@ Descobertos em execuções reais. **Aplicam-se a qualquer classe.**
 
 **Estratégia:**
 1. **Aceitar como limitação:** Excluir da meta de cobertura via code review.
-2. **Refatorar (altera produção):** Injetar dependência via `@TestVisible` wrapper.
+2. **Refatorar (altera produção) — ⚠️ FORA DO ESCOPO desta skill:** injetar dependência
+   via `@TestVisible` wrapper. Isto **altera a classe de produção**, o que a `apex-test-loop`
+   NUNCA faz por conta própria — é trabalho da `platform-apex-generate`, com aprovação
+   humana explícita. Listado só para contexto; não é caminho do loop.
    ```apex
    @TestVisible
    private static Boolean isFeatureEnabled() {
@@ -49,7 +52,7 @@ Descobertos em execuções reais. **Aplicam-se a qualquer classe.**
    ```
 3. **Documentar:** Registrar no state file (`state/<Classe>.md`) com motivo — "FeatureManagement, inalcançável em teste".
 
-**Recomendação:** Estratégia 1 (aceitar). Não refatore produção para cobrir teste.
+**Recomendação:** Estratégia 1 (aceitar) ou 3 (documentar). **Nunca** a 2 dentro do loop — não refatore produção para cobrir teste.
 
 ---
 

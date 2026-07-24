@@ -111,8 +111,30 @@ faca com o "ok" do usuario, marcado para revisao.
 A cada volta do loop, mostre a cobertura subindo (`72% -> 88% -> 99%`) e o que ainda
 falta. Mantenha curto e comemore o avanco.
 
-### Etapa 9 — Encerramento e aprendizado
-Quando bater a meta, recapitule em linguagem simples:
+### Etapa 9 — Confirmacao oficial de deploy (Portão 2, automatica)
+Bater ≥99% no passo anterior (Portão 1) **ainda nao e concluir**. Antes de declarar
+pronto, rode a **validacao oficial de deploy** — e automatica, nao precisa pedir
+permissao (ela **nao grava nada** na org, so simula). Explique simples:
+
+> "A cobertura chegou na meta. Agora vou fazer uma **conferencia final**: pedir para a
+> Salesforce simular o deploy de verdade (sem enviar nada), do jeitinho que seria para
+> subir em producao. E o que confirma que a classe **realmente** entra."
+
+```bash
+node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs \
+  --class X --test XTest --validate --org minhaOrg
+```
+
+- Se confirmar (`deployWouldSucceed`): "conferido — passaria num deploy real. Podemos
+  encerrar." Grave `portao_2_deploy_validate: confirmado` e siga para a Etapa 10.
+- Se **nao** confirmar: "a simulacao apontou um problema: <motivo>. Isso nao e concluir
+  — vou <corrigir / te explicar as opcoes>." Trate como o loop manda (continuar ou, se
+  for limitacao de ambiente, PAUSAR e apresentar as opcoes). **Nao** declare pronto.
+- Se vier `coverageUnreadable` (a org nao expos a cobertura na simulacao): tudo bem — a
+  simulacao ja garante deployabilidade; use os 99% ja confirmados no Portão 1.
+
+### Etapa 10 — Encerramento e aprendizado
+Quando bater a meta **e o Portão 2 confirmar**, recapitule em linguagem simples:
 
 - cobertura final e quantos testes foram criados;
 - o que cada teste valida (caminho feliz, erros, exceções, massa);

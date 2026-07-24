@@ -783,4 +783,38 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
 - **Próximo passo:** homologar (o `--validate` real numa org confirma qual das 2
   estruturas o `sf` da org devolve e se o `coverageUnreadable` some).
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0044, R-0045... -->
+### R-0044 — 2ª rodada de auditoria: Portão 2 faltava no modo guiado + 3 blindagens
+- **Status:** 🟢 Aprovada e aplicada (na branch `claude/consistencia-refs-guiado`)
+- **Data:** 2026-07-24
+- **Gatilho:** segunda rodada de auditoria de consistência (a pedido do usuário), agora
+  varrendo as **referências secundárias** que a 1ª rodada não leu por inteiro. Uma
+  varredura estruturada (subagente) cruzou 6 refs contra o modelo atual (contexto único,
+  dois portões, meta ≥99%, allowlist de estado). Checagem determinística dos contratos
+  que a 1ª rodada já cobria: limpa (campos de portão idênticos entre SKILL/loop-rules/
+  run-state/guard/script; flags do SKILL ↔ script; zero referências fantasmas aos agentes).
+- **Furo real (MÉDIO) — modo guiado concluía sem o Portão 2:** o `guided-mode.md` ia da
+  Etapa 8 (bater ≥99% via `--test-only`) direto para o encerramento, sem nenhuma etapa de
+  `deploy validate`. Um iniciante seguindo o roteiro literalmente pularia o Portão 2 —
+  contradizendo `loop-rules.md` (o guiado herda as regras, muda só a comunicação).
+  **Fix:** nova **Etapa 9 — Confirmação oficial de deploy (Portão 2, automática)** em
+  linguagem simples (roda `--validate`, não pede permissão pois é check-only, trata
+  `coverageUnreadable`), e o encerramento (agora Etapa 10) condicionado à confirmação.
+- **Blindagens (baixas, contra leitura apressada de modelo fraco):**
+  - `apex-test-loop-recommendations.md:19`: célula "fan-out" ganhou "(opt-in — ver
+    parallel-methods.md)" para não sugerir fan-out como fluxo padrão.
+  - `apex-test-loop-recommendations.md` P-0001 Estratégia 2 (refatorar produção via
+    `@TestVisible`): marcada explicitamente como **FORA DO ESCOPO** (é da
+    `platform-apex-generate`, com aprovação) — o texto já concluía contra ela, agora é
+    inequívoco.
+  - `sf-cli-and-coverage.md:76`: o "75% org-wide" (fato correto) ganhou cláusula de que
+    **não é a meta desta skill** (≥99% na classe).
+- **Verificado OK (sem furo):** `runtime-blockers.md`, `scaffolding-dependencies.md`,
+  `contribution-guidelines.md` — 100% consistentes.
+- **Ponteiro morto corrigido:** a árvore de "Estrutura" do `INFORMACOES.md` listava 3
+  arquivos que **nunca existiram** no repo (`quality-checklist.md`,
+  `testing-dml-and-exceptions.md`, `callouts-and-async.md`). O `SKILL.md` NÃO os
+  referencia (verificado por grep) — o furo era só na doc de usuário. Removidas as 3
+  linhas da árvore. (Também aparecem no `RECOMMENDATIONS.md:133`, mas ali é histórico de
+  um plano antigo — mantido como registro.)
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0045, R-0046... -->
