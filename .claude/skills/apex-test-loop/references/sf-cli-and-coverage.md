@@ -73,7 +73,8 @@ Flags que importam:
 
 > Observacao: a cobertura reportada aqui e a atribuivel a ESTA classe de teste.
 > Isso e exatamente o sinal que o loop precisa (fazer o teste dedicado cobrir a
-> classe). A cobertura "org-wide" e outra metrica (minimo 75% para deploy em prod).
+> classe). A cobertura "org-wide" e outra metrica (minimo 75% para deploy em prod) —
+> **e esse 75% NAO e a meta desta skill**, que e o piso fixo de ≥99% na classe sob teste.
 
 ## 3) Formato do JSON de cobertura
 

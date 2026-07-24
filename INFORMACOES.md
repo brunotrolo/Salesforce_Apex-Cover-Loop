@@ -201,9 +201,6 @@ O bloqueio por texto e forte para comandos diretos, mas nao e uma fronteira abso
       sf-cli-and-coverage.md        # comandos sf crus (deploy/run/cobertura/validate) + fallback quando o script falha
       contribution-guidelines.md    # como registrar aprendizados (R-XXXX)
       apex-test-loop-recommendations.md  # banco de dados de padroes descobertos
-      quality-checklist.md          # checklist final antes de marcar "done"
-      testing-dml-and-exceptions.md # padroes de teste para DML e excecoes
-      callouts-and-async.md         # padroes de teste para callouts e async
   platform-apex-test-generate/      # \
   platform-apex-test-run/           #  |
   platform-apex-generate/           #  |  7 skills OFICIAIS importadas (craft),
