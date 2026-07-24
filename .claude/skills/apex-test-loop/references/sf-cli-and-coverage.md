@@ -134,7 +134,7 @@ que "os testes passaram".
 
 ```bash
 sf project deploy validate \
-  --metadata ApexClass:MinhaClasse ApexClass:MinhaClasseTest \
+  --metadata ApexClass:MinhaClasseTest \
   --test-level RunSpecifiedTests \
   --tests MinhaClasseTest \
   --coverage-formatters json \
@@ -142,9 +142,13 @@ sf project deploy validate \
 ```
 
 - `deploy validate` e **check-only**: simula o deploy inteiro (compila + roda os testes
-  pedidos + calcula cobertura) e **NAO grava nada na org**. Por isso e seguro incluir a
-  classe de PRODUCAO no `--metadata` (nao sobrescreve nada) — replica o comando que os
-  devs usam para liberar em producao.
+  pedidos + calcula cobertura) e **NAO grava nada na org**.
+- ⚠️ **Valide SOMENTE a classe de TESTE no `--metadata`** (bug corrigido em campo). Incluir
+  `ApexClass:MinhaClasse` (producao) quebra com **"No source-backed components present in
+  the package"** quando a producao nao esta no source local — que e o caso normal do loop
+  (a producao ja esta na org; so o teste e local). A cobertura da producao E calculada do
+  mesmo jeito, porque `RunSpecifiedTests` roda o teste que a exercita. So inclua a producao
+  se ela for NOVA/alterada e estiver no seu source (aí e um `deploy validate` a parte).
 - `--test-level RunSpecifiedTests --tests <TestClass>` roda so o(s) teste(s) dessa
   classe (nao a suite inteira da org).
 - Se a validacao **falhar** apesar de o `apex run test` ter dado `>=99%` (ex.: cobertura

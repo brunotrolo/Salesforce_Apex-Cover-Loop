@@ -32,8 +32,10 @@ coveredPercent >= 99  E  failures == []  E  slowTests == []
 o loop NÃO conclui direto no Portão 1. É a **validação oficial de deploy** — o mesmo gate
 que a Salesforce aplica a um deploy real de produção (cobertura é o que prevalece para
 deployar, não só "os testes passaram"): `sf project deploy validate --test-level
-RunSpecifiedTests`, **check-only** (simula o deploy inteiro e NÃO grava nada na org),
-incluindo a classe de produção + a de teste no `--metadata`.
+RunSpecifiedTests`, **check-only** (simula o deploy inteiro e NÃO grava nada na org).
+Valida **somente a classe de TESTE** no `--metadata` — a produção já está na org e, no
+fluxo do loop, não tem source local; incluí-la quebra o validate com "No source-backed
+components". A cobertura da produção é calculada mesmo assim, pois o teste a exercita.
 
 **Mecanismo (v3): o `--gate` roda os dois portões numa chamada só e dispara o Portão 2
 AUTOMATICAMENTE quando o Portão 1 passa** — não há como chegar aos 99% sem o validate

@@ -317,8 +317,14 @@ function runTests() {
 }
 
 // Roda o Portao 2 (deploy validate check-only).
+// IMPORTANTE (bug corrigido em campo): valida SOMENTE a classe de TESTE, nao a de
+// producao. A producao ja esta na org e, no fluxo do loop, NAO tem source local — incluir
+// `ApexClass:<producao>` fazia o `deploy validate` quebrar com "No source-backed components
+// present in the package". A cobertura da producao E calculada mesmo assim, porque
+// `--test-level RunSpecifiedTests` roda o teste, que exercita a producao. Se voce precisar
+// validar uma producao NOVA/alterada, faca um deploy validate separado com o source dela.
 function runValidate() {
-  const meta = [`ApexClass:${className}`, `ApexClass:${testName}`, ...extraMeta];
+  const meta = [`ApexClass:${testName}`, ...extraMeta];
   const vArgs = ['project', 'deploy', 'validate'];
   for (const m of meta) vArgs.push('--metadata', m);
   vArgs.push(

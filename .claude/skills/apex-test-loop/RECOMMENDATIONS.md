@@ -411,4 +411,26 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
 - **Consolida a homologação:** fecha o buraco central que R-0039/R-0041 tentaram cobrir
   por instrução — agora é garantido por construção.
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0048, R-0049... -->
+### R-0048 — v3 hotfix: Portão 2 do `--gate` incluía produção e quebrava o validate
+- **Status:** ✅ Aplicada (v3 hotfix)
+- **Data:** 2026-07-24
+- **Gatilho:** PRIMEIRA homologação end-to-end da v3 (OpenCode/DeepSeek Flash,
+  `invoiceSummary_ctr`, org OdinArchitect). **Boa notícia:** o modelo usou o `--gate` toda
+  iteração, manteve o checkpoint e iterou 92%→93%→97%→99% com 30 testes — o script-first +
+  `--gate` puxaram o modelo pro trilho. **Bug:** o `--gate`/`--validate` falharam no Portão
+  2 com `No source-backed components present in the package`, porque o `runValidate`
+  incluía `ApexClass:<producao>` no `--metadata` — e a produção não estava no source local
+  (fluxo normal do loop: produção já na org, só o teste é local). O modelo contornou na mão
+  validando só a classe de teste (30/30, Succeeded).
+- **Problema:** a premissa "incluir produção no validate é seguro porque é check-only"
+  estava certa quanto a NÃO sobrescrever, mas ignorava que `deploy validate` exige
+  **source-backed components** — sem o `.cls` da produção local, quebra.
+- **Fix:** `runValidate()` passa a validar **somente a classe de teste** (`--metadata
+  ApexClass:<Test>` + extras). A cobertura da produção continua sendo calculada porque
+  `--test-level RunSpecifiedTests` roda o teste, que exercita a produção. `loop-rules.md` e
+  `sf-cli-and-coverage.md` corrigidos (removida a inclusão da produção; documentado o erro
+  "No source-backed components"). Parsers inalterados (9 casos, PASS).
+- **Resultado da homologação:** com este fix, o `--gate` fecha o Portão 2 sozinho (como o
+  fallback manual provou). A garantia estrutural da v3 está validada em campo.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0049, R-0050... -->
