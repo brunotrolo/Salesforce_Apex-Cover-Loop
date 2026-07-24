@@ -817,4 +817,18 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   linhas da árvore. (Também aparecem no `RECOMMENDATIONS.md:133`, mas ali é histórico de
   um plano antigo — mantido como registro.)
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0045, R-0046... -->
+### R-0045 — Allowlist de escrita: guard impede arquivo solto na raiz/pastas
+- **Status:** 🟢 Aprovada e aplicada
+- **Data:** 2026-07-24
+- **Gatilho:** o usuário pediu garantir uma regra que impeça o loop de gravar arquivos
+  em qualquer lugar da raiz/pastas do projeto. Auditoria confirmou o buraco: não havia
+  regra positiva de allowlist de escrita, e o `guard.mjs` só barrava `.md` solto dentro
+  de `.apex-test-loop/` — um `notes.txt`/`debug.json`/pasta nova na raiz passava.
+- **Fix:** `guard.mjs` ganha `classifyStrayFile` — ao CRIAR arquivo NOVO fora da
+  allowlist (classe de teste/factory `.cls`/`-meta.xml`, metadados de scaffold, artefatos
+  de estado em `.apex-test-loop/` + 2 ledgers), pede confirmação (`ask`). Editar arquivo
+  existente é liberado (não atrapalha trabalho fora do loop no mesmo repo). `loop-rules.md`
+  ganha a trava #7 (allowlist de escrita) como regra positiva na fonte única. Smoke test:
+  12 casos, todos passam.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0046, R-0047... -->

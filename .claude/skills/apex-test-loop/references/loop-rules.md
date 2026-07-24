@@ -138,6 +138,14 @@ concluir — mesmo com cobertura e testes 100% passando.
 6. Nenhum comando destrutivo (`sf project/org/data delete`, deploy destrutivo,
    apagar/mover `.cls`/`.trigger`) — reforçado por `settings.json` (deny) e
    `scripts/guard.mjs` (hook `PreToolUse`), independente do prompt.
+7. **Allowlist de escrita — o loop só CRIA arquivo em 3 lugares.** Nunca saia gravando
+   arquivo solto na raiz ou em pastas do projeto. Os únicos alvos permitidos:
+   (a) a **classe de teste/factory** (`<Classe>Test.cls` + `-meta.xml`);
+   (b) **metadados de scaffold** (arquivos `__c`/`__mdt` novos — só no modo scaffold);
+   (c) **artefatos de estado** em `.apex-test-loop/` (checkpoint/log) e os 2 ledgers de
+   aprendizado (ver `run-state.md`). Qualquer outro arquivo novo (notas, logs, JSON
+   avulso, backup, cópia) é proibido — reforçado por `scripts/guard.mjs`
+   (`classifyStrayFile`), que pede confirmação para criação fora desta allowlist.
 
 ## Ordem do ciclo (o que nunca inverter)
 
