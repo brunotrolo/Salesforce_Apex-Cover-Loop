@@ -208,6 +208,42 @@ export function classifyConclusion(filePath, content, diskOverride) {
   };
 }
 
+// --- Camada de ARQUIVO SOLTO (allowlist de escrita) -------------------------
+// Impede o loop de "sair gravando arquivo em qualquer lugar da raiz ou pastas do
+// projeto". Regra positiva: ao CRIAR um arquivo NOVO, ele so pode ser (a) codigo
+// Apex ou metadado (governados por classifyWrite / criados legitimamente: classe de
+// teste, stub de scaffold), ou (b) um artefato de estado da allowlist
+// (.apex-test-loop/state/<Classe>.md|.log.md|cov-*.json|.err) ou os 2 ledgers.
+// QUALQUER OUTRO arquivo novo (notes.txt, debug.json, scratch.md na raiz, etc.) pede
+// confirmacao ('ask') — nunca cria sujeira silenciosa. Editar arquivo que JA EXISTE
+// nao e "sujeira nova" -> liberado (nao atrapalha trabalho fora do loop no mesmo repo).
+const COV_ARTIFACT_RE =
+  /(^|[\\/])\.apex-test-loop[\\/]state[\\/][A-Za-z0-9_-]+\.(json|err)$/i;
+const CODE_META_EXT_RE = /\.(cls|trigger|[a-z0-9]+-meta\.xml)$/i;
+export function classifyStrayFile(filePath, existsOverride) {
+  const p = String(filePath || '');
+  if (!p) return { blocked: false };
+  const exists = existsOverride !== undefined ? existsOverride : fileExists(p);
+  if (exists) return { blocked: false }; // editar existente nao e criacao de sujeira
+
+  // Alvos legitimos que o loop cria:
+  if (CODE_META_EXT_RE.test(p)) return { blocked: false }; // classe de teste / metadado de scaffold
+  if (STATE_ALLOWED_RE.some((re) => re.test(p))) return { blocked: false }; // state/<Classe>.md|.log.md
+  if (RECOMMENDATIONS_ALLOWED_RE.some((re) => re.test(p))) return { blocked: false }; // 2 ledgers
+  if (COV_ARTIFACT_RE.test(p)) return { blocked: false }; // cov-*.json/.err da iteracao
+
+  return {
+    blocked: true,
+    decision: 'ask',
+    why:
+      'criacao de arquivo NOVO fora da allowlist de escrita do loop (' +
+      baseName(p) +
+      '). O loop so cria: a classe de TESTE/factory, metadados de scaffold, e os ' +
+      'artefatos de estado em .apex-test-loop/ — NADA de arquivos soltos na raiz ou ' +
+      'em pastas do projeto',
+  };
+}
+
 function baseName(p) {
   const parts = String(p).split(/[\\/]/);
   return parts[parts.length - 1] || String(p);
@@ -267,6 +303,7 @@ function runHook() {
       // Write traz o conteudo em `content`; Edit, em `new_string`.
       if (!verdict.blocked)
         verdict = classifyConclusion(ti.file_path, ti.content ?? ti.new_string);
+      if (!verdict.blocked) verdict = classifyStrayFile(ti.file_path);
     } else {
       // fallback: varre o JSON inteiro por padrao de comando destrutivo
       verdict = classify(JSON.stringify(ti));
