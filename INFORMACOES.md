@@ -62,6 +62,8 @@ O loop só declara `concluido` depois de **dois portões objetivos**, medidos se
 
 Por que dois portões: iterar a cada rodada com `deploy validate` seria caro e lento; `apex run test` já dá o sinal certo para dirigir o loop. Mas quem decide se a classe **realmente deployaria** é o `deploy validate` — por isso ele entra como confirmação final, uma única vez.
 
+> **v3 — o `--gate` garante o Portão 2 por construção.** Antes, os dois portões eram comandos separados que o agente orquestrava — e um modelo fraco chegava aos 99% e **esquecia** de rodar o `deploy validate`. Na v3, o comando padrão do loop é `apex-coverage.mjs --gate`: numa chamada só ele faz deploy → teste (Portão 1) → e **dispara o `deploy validate` (Portão 2) automaticamente** assim que bate ≥99%. É impossível concluir sem o Portão 2 — a garantia deixou de depender do modelo. O script devolve `verdict: continuar | concluido | bloqueado`; só `concluido` autoriza o fim.
+
 Se o Portão 2 falhar mesmo com o Portão 1 tendo passado (ex.: cobertura agregada da org abaixo do mínimo, dependência ausente), o loop **não conclui** — volta a `continuar` com o motivo revelado pelo `validateError`, ou para em `bloqueado` se for decisão do humano.
 
 ---

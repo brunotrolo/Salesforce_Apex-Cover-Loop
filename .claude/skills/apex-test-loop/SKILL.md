@@ -63,27 +63,34 @@ drip-feed (deploy prematuro), crítico com modelos menores.
    (linhas/ramos específicos ainda descobertos — nunca "melhore a cobertura" genérico).
    Para o craft (mocks, asserts, data factory, bulk, async), invoque as skills oficiais
    via `Skill` em vez de reinventar. **Nunca** toque na classe de produção.
-2. **Deploy + teste + cobertura.** Rode **este script** — é a fonte determinística.
-   Redirecione a saída completa para arquivo (**nunca** trunque com `tail`/`head`):
+2. **Deploy + teste + (validate se ≥99%) — UM comando só: `--gate`.** Rode **este
+   script**; ele é a fonte determinística e faz a sequência inteira, então você não
+   orquestra `sf` na mão. Redirecione a saída completa (**nunca** trunque com `tail`/`head`):
    ```bash
    node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs \
-     --class <Classe> --test <Classe>Test --test-only [--org <alias>] [--extra ApexClass:TestDataFactory] \
+     --class <Classe> --test <Classe>Test --gate [--org <alias>] [--extra ApexClass:TestDataFactory] \
      > .apex-test-loop/state/cov-atual.json 2> .apex-test-loop/state/cov-atual.err
    ```
+   O `--gate` faz, numa chamada: **deploy da classe de teste → roda o teste (Portão 1) →
+   e SÓ se bater ≥99% sem falhas/lentos, roda o `deploy validate` (Portão 2)
+   automaticamente.** Você **nunca** precisa lembrar de rodar o validate — ele está no
+   mesmo comando; é impossível chegar aos 99% sem o Portão 2 disparar.
    > ⛔ **NÃO improvise comandos `sf` na mão** (você vai alucinar flag e perder tempo —
-   > já aconteceu em campo). O script já roda o comando certo e já parseia a cobertura
+   > já aconteceu em campo). O script já roda os comandos certos e já parseia a cobertura
    > (a estrutura é `result.coverage.coverage[]`, não `codeCoverage`). Flags que **NÃO
    > existem** — nunca use: `sf project deploy start --run-tests`/`--code-coverage`
    > (cobertura vem do `apex run test`, não do deploy) e `sf apex get test --class-names`
-   > (esse comando precisa de `--test-run-id`). Só caia em `sf` cru pelo **fallback** de
+   > (precisa de `--test-run-id`). Só caia em `sf` cru pelo **fallback** de
    > `references/sf-cli-and-coverage.md` se o script realmente não rodar.
-   ⚠️ **Timeout:** o run é síncrono e testes de callout podem levar vários segundos cada
-   — use um timeout generoso (≥ 300s) na chamada do comando. Se o script não puder rodar
-   (Node ausente, conflito de formato de source), use o fallback de `references/sf-cli-and-coverage.md`.
-   O JSON emitido depende da **fase** (campo `phase`): se o deploy da classe de teste
-   **falhar**, vem `phase: "deploy"` com `deployErrors` e `blockedByDependency`; se o deploy
-   passar e o teste rodar, vem `phase: "test"` com `coveredPercent`, `uncoveredLines`,
-   `failures` e `slowTests`. Trate cada fase pelo que ela traz.
+   ⚠️ **Timeout:** é síncrono e junta deploy+teste+validate — use timeout generoso
+   (**≥ 600s**) na chamada. Se o script não puder rodar (Node ausente, conflito de formato
+   de source), use o fallback de `references/sf-cli-and-coverage.md`.
+   O JSON tem sempre `phase: "gate"` e um campo **`verdict`** que dirige o passo 3:
+   - **`continuar`** → Portão 1 ainda não passou. Use `portao1.coveredPercent` /
+     `uncoveredLines` / `failures` / `slowTests` + `reason` para mirar o próximo alvo.
+     (Se o deploy falhou, vem `deploy.deployErrors` e `deploy.blockedByDependency`.)
+   - **`concluido`** → Portão 1 **e** Portão 2 confirmados. Único verdict que autoriza `concluido`.
+   - **`bloqueado`** → dependência ausente / limitação de ambiente; leve ao humano (`reason`).
 3. **Analisar** o JSON + o histórico do checkpoint e decidir (ver `loop-rules.md` e
    `references/runtime-blockers.md`):
    - Deploy falhou na própria classe de teste (compilação) → corrija citando `deployErrors`.
@@ -106,35 +113,32 @@ drip-feed (deploy prematuro), crítico com modelos menores.
    crie arquivos soltos (`-Copia`/`-backup`) nem pastas novas.
 5. Volte ao passo 1 até bater o critério de conclusão.
 
-## Critério de conclusão — DOIS portões (nunca conclua sem os dois)
+## Critério de conclusão — DOIS portões (ambos DENTRO do `--gate`)
 
-Detalhe completo em `loop-rules.md`. Resumo operacional:
+O `--gate` já encadeia os dois portões numa chamada — **você não roda o validate à
+parte, e não tem como concluir sem ele**:
 
-- **Portão 1** (a cada iteração, via `apex run test`): `coveredPercent >= 99` **e**
-  `failures == []` **e** `slowTests == []`. Marque `portao_1_apex_run_test: confirmado`.
-- **Portão 2** (UMA vez, disparado AUTOMATICAMENTE ao bater o Portão 1): rode a validação
-  oficial — **não pergunte, não liste como opção, não encerre o turno pedindo permissão**:
-  ```bash
-  node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs \
-    --class <Classe> --test <Classe>Test --validate [--org <alias>] [--extra ...] \
-    > .apex-test-loop/state/cov-validate.json 2> .apex-test-loop/state/cov-validate.err
-  ```
-  É `sf project deploy validate --test-level RunSpecifiedTests` (check-only, não grava na
-  org). Só declare `concluido` com `deployWouldSucceed == true` **e** `coveredPercent >= 99`
-  **e** `failures == []` do `phase: "validate"`, e grave `portao_2_deploy_validate: confirmado`.
-  - Se o Portão 2 **falhar** apesar do Portão 1 (ex.: `validateError` sobre cobertura
-    agregada da org ou dependência), NÃO é conclusão — é continuar (citando o
-    `validateError`) ou bloqueado (se for limitação de ambiente que exige decisão humana).
-  - Se vier `coverageUnreadable: true` (o `sf` não expôs a cobertura no JSON do validate),
-    NÃO trave: `deployWouldSucceed == true` já confirma deployabilidade; use o
-    `coveredPercent` **já confirmado no Portão 1** (≥99) para o critério de 99%. Conclua
-    com `deployWouldSucceed == true` **e** `failures == []` **e** (cobertura do validate ≥99
-    **ou**, se ilegível, a do Portão 1 ≥99).
+- **Portão 1**: `coveredPercent >= 99` **e** `failures == []` **e** `slowTests == []`
+  (via `apex run test`).
+- **Portão 2** (dispara **automaticamente** quando o Portão 1 passa): `deploy validate`
+  check-only — o mesmo gate de um deploy real de produção — confirma `deployWouldSucceed`.
 
-**Nunca** rode `--validate` a cada iteração (é mais pesado) — só uma vez, ao final.
-`status: concluido` EXIGE `portao_2_deploy_validate: confirmado` — e isso é **reforçado
-pelo `guard.mjs`** (`classifyConclusion`): tentar gravar `concluido` sem o Portão 2
-confirmado é bloqueado (`ask`), independente do que você decidir.
+Só declare `status: concluido` quando o `--gate` devolver **`verdict: "concluido"`** (os
+dois portões confirmados). Grave então `portao_1_apex_run_test: confirmado` **e**
+`portao_2_deploy_validate: confirmado`. Se vier `verdict: "continuar"` ou `"bloqueado"`,
+**NÃO** conclua — siga o `reason`.
+
+> **`coverageUnreadable`:** se o `sf` não expôs a cobertura no JSON do validate, o
+> `--gate` já resolve sozinho (usa o ≥99% do Portão 1 e confirma pela deployabilidade) e
+> ainda assim devolve `verdict: "concluido"`. Você não precisa fazer nada especial.
+
+**Trava dura:** `status: concluido` EXIGE `portao_2_deploy_validate: confirmado` —
+reforçado pelo `guard.mjs` (`classifyConclusion`), que bloqueia (`ask`) gravar `concluido`
+sem isso, independente do que você decidir.
+
+> **Modos granulares (avançado/depuração):** `--test-only` (só Portão 1), `--validate`
+> (só Portão 2) e `--deploy` (produção nova/alterada) continuam existindo para depurar um
+> passo isolado. No loop normal, use sempre `--gate`.
 
 ## Autonomia — 100% autônomo entre os pontos nomeados
 

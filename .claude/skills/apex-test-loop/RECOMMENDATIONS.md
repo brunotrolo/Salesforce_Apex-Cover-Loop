@@ -386,4 +386,29 @@ existe tanto no repositorio-casa quanto na copia dentro do seu projeto Salesforc
   código): modo `--gate` no script que encadeia deploy→teste→validate num comando só,
   para o modelo não ter como pular o Portão 2 nem orquestrar na mão.
 
-<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0047, R-0048... -->
+### R-0047 — v3: modo `--gate` (deploy→teste→validate num comando) vira o PADRÃO
+- **Status:** ✅ Aplicada (v3)
+- **Data:** 2026-07-24
+- **Gatilho:** dois runs em campo (DeepSeek Flash, `invoiceSummary_ctr`) mostraram o
+  modelo chegando a 99% **sem nunca rodar o Portão 2** — porque a validação era um passo
+  separado que o modelo orquestrava (e pulava). O usuário pediu uma v3 que **garanta**
+  que, ao bater 99%, o `deploy validate` roda.
+- **Problema:** com os portões como comandos separados, a garantia dependia do modelo
+  lembrar de rodar o `--validate`. Um modelo fraco não lembra.
+- **Melhoria aplicada:** modo `--gate` no `apex-coverage.mjs` — uma chamada só faz
+  deploy da classe de teste → roda o teste (Portão 1) → e **SÓ se o Portão 1 passar
+  (≥99%, sem falhas, sem lentos), roda o `deploy validate` (Portão 2) automaticamente**.
+  Emite `phase:"gate"` com `verdict: continuar|concluido|bloqueado`. Assim é
+  **impossível** chegar aos 99% sem o Portão 2 disparar — a garantia é estrutural, não
+  depende do modelo. `--gate` deploya só a classe de teste com `--ignore-conflicts`
+  (seguro, remove o fumble de source-tracking visto em campo). Refatorado com parsers
+  puros compartilhados (`extractClassCoverage`/`extractValidateCoverage`/...) e `main()`
+  guardada por `invokedDirectly` (modulo testavel). Smoke test dos parsers: 9 casos, PASS.
+- **Docs:** `SKILL.md` passo 2 usa `--gate` como padrão e a conclusão exige
+  `verdict:"concluido"`; `loop-rules.md` descreve o `--gate` como mecanismo dos dois
+  portões. Modos granulares (`--test-only`/`--validate`/`--deploy`) permanecem para
+  depuração. A trava `classifyConclusion` (guard) segue reforçando o checkpoint.
+- **Consolida a homologação:** fecha o buraco central que R-0039/R-0041 tentaram cobrir
+  por instrução — agora é garantido por construção.
+
+<!-- A skill anexa novas propostas ABAIXO desta linha, como R-0048, R-0049... -->
