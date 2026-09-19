@@ -1,0 +1,166 @@
+# Modo guiado — roteiro passo a passo (para leigos)
+
+Use este roteiro quando o usuario pedir o modo guiado (`--guiado`, `--passo-a-passo`,
+"me ensine", "sou iniciante", "nunca usei isso") ou quando parecer iniciante.
+
+## Como conduzir
+
+- **Uma etapa por vez.** Faca UMA coisa, explique, e so avance quando o usuario
+  confirmar ("ok", "pode ir", "proximo"). Nao despeje tudo de uma vez.
+- **Portugues simples.** Frases curtas. Sem jargao — ou explique o termo na hora
+  (veja o Glossario). Uma pergunta por vez.
+- **Mostre e traduza.** Sempre mostre o comando que vai rodar e, depois, traduza o
+  resultado em linguagem humana (nunca cole JSON cru para o usuario).
+- **Pausas obrigatorias** (espere um "ok" antes de continuar):
+  1. antes do **primeiro deploy** (voce vai enviar codigo para a org dele);
+  2. se alguma acao for **tocar a classe de producao** — isso NAO e trabalho desta
+     skill (e da platform-apex-generate): PAUSE, explique o risco e so siga com "ok".
+- **Qualidade nao muda.** As Travas do `SKILL.md` continuam valendo (e as Regras de
+  qualidade, se `--rigoroso`): nada de inflar cobertura nem tocar producao. O modo
+  guiado muda so o tom da conversa.
+
+## Roteiro
+
+### Etapa 1 — Boas-vindas e visao geral
+**Antes de tudo**: se existir estado salvo da classe (caminho neutro
+`<projeto>/.apex-test-loop/state/<Classe>.md`; veja `references/run-state.md`),
+ofereca retomar: *"Encontrei um progresso salvo: cobertura em 88%, faltava cobrir a
+linha 45. Quer continuar de onde paramos?"*. Tranquilize tambem que **o progresso
+fica salvo** a cada volta ("se a gente parar aqui, eu retomo deste ponto depois").
+
+Explique, em poucas linhas, o que vamos fazer e o ciclo de 4 passos. Exemplo de fala:
+
+> "Vamos criar (ou melhorar) a classe de teste da sua classe **X** para ela cobrir
+> quase todo o codigo, testando situacoes de verdade. Funciona em ciclo: **1)** eu
+> escrevo os testes, **2)** envio para a sua org, **3)** rodo e meço a cobertura,
+> **4)** vejo o que faltou e melhoro — repetindo ate a meta (>= 99%). Vou te
+> explicando cada passo. Posso comecar?"
+
+### Etapa 2 — Checar o ambiente (e ensinar por que)
+Precisamos de 3 coisas. Cheque uma a uma e diga como resolver se faltar:
+
+1. **Salesforce CLI (`sf`)** — "e o programa que conversa com a sua org pelo
+   terminal". Cheque `sf --version`. Se faltar → aponte
+   https://developer.salesforce.com/tools/salesforcecli e pare ate instalar.
+2. **Uma org conectada** — "org e o seu ambiente Salesforce (sandbox ou scratch)
+   onde os testes vao rodar". Cheque `sf org display`. Se nao houver, oriente:
+   `sf org login web --alias minhaOrg` ("vai abrir o navegador para voce logar").
+   Se houver mais de uma, pergunte qual usar.
+3. **A classe existe** — procure o arquivo `.cls` e confirme: "achei sua classe em
+   `.../classes/X.cls`, e essa mesmo?".
+
+### Etapa 3 — Explicar a classe e a meta
+Leia a classe e explique, simples, o que ela faz e quais **situacoes** precisam de
+teste ("o caminho que da certo", "quando falta um dado", "quando da erro"). Ensine:
+
+> "**Cobertura** e a % das linhas do codigo que os testes fazem rodar. A meta e
+> **>= 99% com todos os testes passando** — e o que a plataforma exige para levar
+> o codigo de um ambiente a outro (deploy). Se voce quiser, tambem da para pedir o
+> modo *rigoroso*, em que cada teste confere os resultados em detalhe (asserts)."
+
+### Etapa 4 — Escrever o primeiro teste (mostrar e explicar)
+Crie a classe de teste com os primeiros cenarios (comece pelo caminho feliz). Mostre
+o que criou e explique cada metodo em 1 linha. Ensine de leve:
+
+- `@IsTest` — "marca que isto e codigo de teste, nao vai para producao".
+- `@TestSetup` — "cria os dados de exemplo uma vez, para todos os testes".
+- `Assert` — "a linha que confere se o resultado saiu como esperado".
+
+### Etapa 5 — PAUSA: pedir permissao para o deploy
+Explique e **espere confirmacao**:
+
+> "Agora preciso fazer o **deploy**: enviar **o seu TESTE** para a org
+> **minhaOrg**, para poder rodar la. A sua classe original **ja esta na org e nao
+> sera tocada** — so o arquivo de teste sobe. Posso enviar? Vou rodar este comando:"
+> ```bash
+> node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs \
+>   --class X --test XTest --test-only --org minhaOrg
+> ```
+
+### Etapa 6 — Rodar e traduzir o resultado
+Rode o script e traduza a saida para o usuario, sem JSON:
+
+- Se falhou ao compilar: "o codigo do teste tem um erro na linha N: <mensagem>. Vou
+  corrigir." → corrija e volte a Etapa 6.
+- Se um teste falhou: "o teste tal esperava A mas veio B. Vou ajustar." → corrija.
+- Se passou: "todos passaram. A cobertura agora esta em **X%**. Ainda faltam as
+  linhas **N, M**, que correspondem a <situacao>."
+
+### Etapa 7 — Melhorar o que faltou (ensinar o raciocinio)
+Para cada linha nao coberta, explique o cenario que falta e o que vai adicionar:
+
+> "A linha 45 so roda quando <condicao>. Vou criar um teste que provoca essa
+> situacao e confere o resultado."
+
+Se cair num `catch`/DML dificil, explique a estrategia em ordem (dado invalido real
+→ mock) aplicando o craft da skill **platform-apex-test-generate** (mocking).
+
+Se o teste falhar **por causa da org** (um Flow bloqueando, configuracao que nao
+existe, limite de CPU), seja honesto com o usuario em vez de dar um jeitinho:
+*"esse erro nao e do teste — e do ambiente. As opcoes sao A, B ou C"* (siga
+`runtime-blockers.md`). Nunca esconda o problema fazendo o teste "passar" vazio —
+e se a meta de cobertura parecer inalcancavel neste ambiente, explique o porque e
+apresente as opcoes (apontar a org certa, ou documentar as linhas bloqueadas) — a
+meta continua ≥99%, voce **nao** abaixa o numero por conta propria (isso e decisao
+do dono).
+**Se for preciso tocar na classe de producao**, isso e trabalho da
+**platform-apex-generate** com aprovacao — PAUSE, explique o que muda e o risco, e so
+faca com o "ok" do usuario, marcado para revisao.
+
+### Etapa 8 — Repetir mostrando o progresso
+A cada volta do loop, mostre a cobertura subindo (`72% -> 88% -> 99%`) e o que ainda
+falta. Mantenha curto e comemore o avanco.
+
+### Etapa 9 — Confirmacao oficial de deploy (Portão 2, automatica)
+Bater ≥99% no passo anterior (Portão 1) **ainda nao e concluir**. Antes de declarar
+pronto, rode a **validacao oficial de deploy** — e automatica, nao precisa pedir
+permissao (ela **nao grava nada** na org, so simula). Explique simples:
+
+> "A cobertura chegou na meta. Agora vou fazer uma **conferencia final**: pedir para a
+> Salesforce simular o deploy de verdade (sem enviar nada), do jeitinho que seria para
+> subir em producao. E o que confirma que a classe **realmente** entra."
+
+```bash
+node .claude/skills/apex-test-loop/scripts/apex-coverage.mjs \
+  --class X --test XTest --validate --org minhaOrg
+```
+
+- Se confirmar (`deployWouldSucceed`): "conferido — passaria num deploy real. Podemos
+  encerrar." Grave `portao_2_deploy_validate: confirmado` e siga para a Etapa 10.
+- Se **nao** confirmar: "a simulacao apontou um problema: <motivo>. Isso nao e concluir
+  — vou <corrigir / te explicar as opcoes>." Trate como o loop manda (continuar ou, se
+  for limitacao de ambiente, PAUSAR e apresentar as opcoes). **Nao** declare pronto.
+- Se vier `coverageUnreadable` (a org nao expos a cobertura na simulacao): tudo bem — a
+  simulacao ja garante deployabilidade; use os 99% ja confirmados no Portão 1.
+
+### Etapa 10 — Encerramento e aprendizado
+Quando bater a meta **e o Portão 2 confirmar**, recapitule em linguagem simples:
+
+- cobertura final e quantos testes foram criados;
+- o que cada teste valida (caminho feliz, erros, exceções, massa);
+- 2-3 licoes rapidas ("por que os asserts importam", "por que nunca trapacear a
+  cobertura mexendo na classe de producao");
+- como rodar sozinho da proxima vez: `/apex-test-loop OutraClasse`.
+
+Se alguma mudanca em producao foi PROPOSTA no caminho (via platform-apex-generate,
+com aprovacao), **destaque isso a parte** para o usuario revisar com o time.
+
+Por fim, faca a **retrospectiva** (veja a fase no `SKILL.md`): se algo na skill te
+atrapalhou neste run, registre em `RECOMMENDATIONS.md` e avise o usuario, em
+linguagem simples — ex.: *"anotei 1 sugestao de melhoria da propria skill; quando
+quiser, e so me pedir para revisar e aplicar"*. Em run tranquilo, nao anote nada.
+
+## Glossario (use quando o termo aparecer)
+
+- **Org** — seu ambiente Salesforce (sandbox, scratch org, producao).
+- **Classe de producao** — o codigo "de verdade" que roda no sistema.
+- **Classe de teste** — codigo que existe so para testar a classe de producao.
+- **Cobertura** — % de linhas do codigo que os testes fazem executar.
+- **Deploy** — enviar o codigo local para a org.
+- **Assert** — verificacao de que o resultado saiu como esperado.
+- **Caminho feliz / negativo** — cenario em que tudo da certo / em que algo falha.
+- **Bulk** — testar com muitos registros (ex.: 200) de uma vez.
+- **DML** — operacao de banco no Salesforce (insert/update/delete).
+- **Governor limits** — limites da plataforma (ex.: nº de consultas por execucao).
+- **Scratch org vs sandbox** — org descartavel de desenvolvimento vs copia de um
+  ambiente para testes.
