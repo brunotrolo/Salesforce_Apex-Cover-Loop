@@ -61,6 +61,15 @@ export const DESTRUCTIVE_RULES = [
     re: /\b(mv|move)\b(?=[\s\S]*\.(?:cls|trigger)\b)/,
     why: 'mover/renomear classe ou trigger Apex (.cls/.trigger)',
   },
+  {
+    // Todo deploy de ciclo rapido (--test-level NoTestRun, a assinatura do modo
+    // scaffold/loop) tem que escopar por artefato exato via --metadata Tipo:Nome
+    // (varios: virgula) -- nunca --source-dir, que reintroduz a imprecisao que
+    // --metadata existe para evitar. apex-coverage.mjs ja segue isso; esta regra
+    // pega qualquer comando manual/editado que fuja do padrao.
+    re: /\bsf\b[\s\S]*\bproject\s+deploy\s+start\b[\s\S]*--test-level[= ]\s*["']?NoTestRun["']?[\s\S]*--source-dir\b|\bsf\b[\s\S]*\bproject\s+deploy\s+start\b[\s\S]*--source-dir\b[\s\S]*--test-level[= ]\s*["']?NoTestRun["']?/i,
+    why: 'deploy de ciclo rapido (--test-level NoTestRun) com --source-dir em vez de --metadata <Tipo>:<Nome> (ex.: --metadata ApexClass:MinhaClasseTest) -- ver references/scaffolding-dependencies.md para o caso de multiplos artefatos novos',
+  },
 ];
 
 // Classificacao de comando: texto -> { blocked, why, decision }.

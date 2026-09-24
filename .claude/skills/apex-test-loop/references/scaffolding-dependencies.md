@@ -93,10 +93,19 @@ Nao scaffolde; use direto.
 ## Deploy no modo scaffold
 
 Como objeto/MDT/classe/teste sao novos na org de dev, faca **um deploy inicial do
-conjunto** (nao so o teste). Numa scratch org com source tracking:
+conjunto** (nao so o teste) — mas mesmo aqui, **nunca `--source-dir`**: liste cada
+artefato scaffoldado explicitamente em `--metadata` (aceita varios, separados por
+virgula), igual ao resto do loop:
 ```bash
-sf project deploy start --source-dir force-app --test-level NoTestRun --target-org <alias>
+sf project deploy start \
+  --metadata CustomObject:Card__c,CustomField:Card__c.Amount__c,CustomObject:CardBlock__mdt,CustomMetadata:CardBlock.Default,ApexClass:CardService,ApexClass:CardServiceTest \
+  --test-level NoTestRun --target-org <alias>
 ```
+(ajuste a lista aos artefatos reais que voce scaffoldou na Secao anterior — objeto,
+campos, MDT + registro, classe de producao stub, classe de teste). `--source-dir
+force-app` deployaria o projeto inteiro, nao so o conjunto novo, e e exatamente o
+padrao impreciso que `--metadata` existe para evitar.
+
 Depois disso, o loop volta ao normal com `--test-only` (tudo ja esta na org) e voce
 itera a cobertura. Uma **scratch org descartavel** e o lugar ideal para isso.
 
