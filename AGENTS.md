@@ -101,6 +101,32 @@ vieram. Falar com o usuário em PT-BR.
 - [ ] Nenhum nome real reintroduzido
 - [ ] README/INFORMACOES refletem mudanças estruturais
 
+## Alinhamento com o framework agentic
+
+Este repositório foi avaliado contra o framework de engenharia agêntica de Boris Cherny
+(plan-mode, delegação a subagentes, loop de auto-melhoria, verificação antes de concluir,
+hooks de PostToolUse, integração MCP/sistêmica, segurança de permissões). O que já existe
+e o que fica como proposta aberta:
+
+- **Sem subagentes no fluxo ativo — por desenho, não por omissão.** A `apex-test-loop`
+  roda em contexto único deliberadamente: o próprio `SKILL.md` documenta que uma versão
+  anterior dividia o loop em 5 subagentes e a passagem de contexto entre eles se mostrou
+  frágil sob interrupção do harness e com modelos menores, observado em campo. A decisão
+  de voltar ao contexto único é intencional e não é reaberta por esta mudança.
+- **Proposta aberta, não ligada ao fluxo:** `.claude/agents/coverage-verifier.md` é um
+  subagente candidato, documentado mas **não invocado** por `SKILL.md` ou por qualquer
+  hook. Ele reconfere a cobertura de forma independente (sem o contexto/viés de quem
+  gerou o teste) depois que o loop principal já declarou `concluido`. Adotá-lo — ligá-lo
+  ao fluxo real — é uma decisão futura do usuário, não algo que esta mudança já ativa.
+- **Loop de auto-melhoria:** `.claude/LESSONS.md` é o mecanismo de auto-melhoria deste
+  repositório — um apêndice (nunca reescrito) com data, o que aconteceu e a regra que
+  resultou, para que uma correção de campo não se perca entre sessões.
+- **Verificação antes de concluir:** `.claude/skills/apex-test-loop/tests/guard.test.mjs`
+  fecha uma lacuna de "verification before done" — antes, as regras do `guard.mjs`
+  (inclusive a que nega `--source-dir` combinado com `--test-level NoTestRun`) não tinham
+  teste automatizado que provasse o comportamento esperado; agora `node --test` cobre os
+  casos de bloqueio e de permissão.
+
 ## Licenças de terceiros
 
 - `.claude/skills/platform-*/` — [forcedotcom/sf-skills](https://github.com/forcedotcom/sf-skills),
