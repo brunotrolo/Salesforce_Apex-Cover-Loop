@@ -144,7 +144,35 @@ concluir — mesmo com cobertura e testes 100% passando.
 6. Nenhum comando destrutivo (`sf project/org/data delete`, deploy destrutivo,
    apagar/mover `.cls`/`.trigger`) — reforçado por `settings.json` (deny) e
    `scripts/guard.mjs` (hook `PreToolUse`), independente do prompt.
-7. **Allowlist de escrita — o loop só CRIA arquivo em 3 lugares.** Nunca saia gravando
+7. **A classe de teste é AUTOCONTIDA — nunca depende de artefato da org nem de outra
+   classe de teste** (falha real observada: deploy para PRODUÇÃO caiu porque a classe
+   de teste fazia uma query a um artefato que não existia naquele ambiente). Isso cobre
+   dois vetores distintos:
+   - **Dados/configuração da org:** nunca faça `[SELECT ... FROM RecordType|Profile|
+     PermissionSet|PermissionSetGroup|Queue|Group|UserRole|BusinessHours|Organization
+     WHERE Name = '...'/DeveloperName = '...']` assumindo que aquela linha existe no
+     ambiente de destino — Record Type, Profile, Permission Set, fila etc. variam por
+     org e **não podem ser criados pelo teste** (são dados de configuração, não
+     registros de negócio). Se o código de produção precisa de um Id de RecordType,
+     use `Schema.SObjectType.<Objeto>.getRecordTypeInfosByDeveloperName()` (describe,
+     não SOQL) ou documente a dependência como limitação de ambiente — nunca assuma
+     a linha presente por nome literal.
+   - **Outra classe de teste:** nunca chame um método estático de criação de dados ou
+     de setup de OUTRA classe `*Test` (ex.: `OutraClasseTest.setupDados()`), nem
+     dependa da ordem de execução entre classes de teste. Cada classe de teste cria
+     **os seus próprios dados**, via `@TestSetup`/`insert` dentro dela mesma ou via
+     `platform-data-manage`/factory dedicada — nunca via efeito colateral de outra
+     suíte. Isso é o que garante rodar isolada em qualquer org, em qualquer ordem.
+   Reforçado estruturalmente por `scripts/guard.mjs` (`classifySelfContainment`, hook
+   `PreToolUse` em `Write`/`Edit` na classe de teste) — pede confirmação (`ask`) ao
+   detectar um destes dois padrões, mas a decisão final de reescrever é sempre sua.
+8. **Mínimo viável para a meta — nunca mais que isso.** O objetivo é bater ≥99% com o
+   MENOR número de métodos/linhas de teste possível, simples e rápido. Não adicione
+   cenário, asserção ou variação de dado que não mire uma linha/ramo ainda descoberto
+   do Inventário de cenários — "pode ser útil depois" não é motivo para crescer a
+   classe de teste. Isso também protege contra o Portão de estabilidade (`slowTests`):
+   teste pequeno e focado tende a ser teste rápido.
+9. **Allowlist de escrita — o loop só CRIA arquivo em 3 lugares.** Nunca saia gravando
    arquivo solto na raiz ou em pastas do projeto. Os únicos alvos permitidos:
    (a) a **classe de teste/factory** (`<Classe>Test.cls` + `-meta.xml`);
    (b) **metadados de scaffold** (arquivos `__c`/`__mdt` novos — só no modo scaffold);

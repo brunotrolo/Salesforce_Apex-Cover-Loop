@@ -125,6 +125,82 @@ export function classifyWrite(filePath, existsOverride) {
   };
 }
 
+// --- Camada de AUTOCONTENCAO (loop-rules.md regra 7) ------------------------
+// Falha real: uma classe de teste bateu >=99% localmente mas o deploy para PRODUCAO
+// caiu porque ela consultava um artefato que nao existia naquele ambiente. Dois
+// vetores, cada um com um padrao estatico detectavel por texto (heuristica — nao
+// substitui revisao humana, so pede confirmacao antes de prosseguir):
+//
+//   1) SOQL literal contra objeto de CONFIGURACAO da org (RecordType/Profile/
+//      PermissionSet/Queue/Group/UserRole/BusinessHours/Organization) filtrando por
+//      Name/DeveloperName/MasterLabel. Essas linhas variam por org e NAO podem ser
+//      inseridas pelo teste (sao dados de configuracao, nao de negocio) — a saida
+//      seguranca e describe (`Schema....getRecordTypeInfosByDeveloperName()`), que
+//      nao usa sintaxe `[SELECT ...]` e por isso nao aciona este padrao.
+//   2) Chamada a metodo estatico de OUTRA classe `*Test` (ex.: `OutraClasseTest.
+//      setupDados()`) — acopla a suite a ordem/estado de uma classe de teste diferente.
+//
+// So se aplica a classe de TESTE (mesmo escopo de nome de classifyWrite). Decisao
+// 'ask': o padrao pode ter falso-positivo (ex.: string de teste citando o nome de uma
+// config so em comentario) — pede confirmacao, nao bloqueia duro.
+const CONFIG_SOBJECT_QUERY_RE =
+  /\[\s*SELECT\b[\s\S]{0,400}?\bFROM\s+(RecordType|Profile|PermissionSet|PermissionSetGroup|Queue|Group|UserRole|BusinessHours|Organization)\b[\s\S]{0,400}?\bWHERE\b[\s\S]{0,200}?\b(Name|DeveloperName|MasterLabel)\s*=/i;
+const CROSS_TEST_CLASS_CALL_RE = /\b([A-Za-z_][A-Za-z0-9_]*Test)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*\(/g;
+
+export function classifySelfContainment(filePath, content) {
+  const p = String(filePath || '');
+  const lower = p.toLowerCase();
+  if (!lower.endsWith('.cls')) return { blocked: false };
+
+  const name = baseName(lower).replace(/\.cls$/, '');
+  const isTestName = /^test/.test(name) || /test$/.test(name);
+  if (!isTestName) return { blocked: false }; // so classe de TESTE tem esta trava
+
+  const src = String(content || '');
+  if (!src) return { blocked: false };
+
+  const configMatch = CONFIG_SOBJECT_QUERY_RE.exec(src);
+  if (configMatch) {
+    return {
+      blocked: true,
+      decision: 'ask',
+      why:
+        'query SOQL literal contra objeto de configuracao da org (' +
+        configMatch[1] +
+        ') filtrando por nome/DeveloperName em ' +
+        baseName(p) +
+        '. Essa linha pode nao existir no ambiente de destino (PRODUCAO ja quebrou por ' +
+        'isso) — use describe (Schema....getRecordTypeInfosByDeveloperName() ou ' +
+        'equivalente) em vez de SOQL, ou documente como limitacao de ambiente ' +
+        '(loop-rules.md regra 7)',
+    };
+  }
+
+  // Qualquer chamada a OutraClasseTest.metodo() onde OutraClasseTest != a propria classe.
+  const ownClassName = baseName(lower).replace(/\.cls$/, '');
+  let crossMatch;
+  CROSS_TEST_CLASS_CALL_RE.lastIndex = 0;
+  while ((crossMatch = CROSS_TEST_CLASS_CALL_RE.exec(src))) {
+    const calledClass = crossMatch[1];
+    if (calledClass.toLowerCase() !== ownClassName.toLowerCase()) {
+      return {
+        blocked: true,
+        decision: 'ask',
+        why:
+          'chamada a metodo estatico de OUTRA classe de teste (' +
+          calledClass +
+          ') dentro de ' +
+          baseName(p) +
+          '. Cada classe de teste deve criar os proprios dados (@TestSetup/insert ou ' +
+          'factory dedicada) — acoplar a outra suite de teste e o 2o vetor da falha real ' +
+          'de autocontencao (loop-rules.md regra 7)',
+      };
+    }
+  }
+
+  return { blocked: false };
+}
+
 // --- Camada de ESTADO/APRENDIZADO -------------------------------------------
 // A escrita de infraestrutura de estado/aprendizado (fora da classe de teste) so pode
 // cair nos 4 caminhos da allowlist FECHADA — qualquer escrita dentro de
@@ -312,6 +388,8 @@ function runHook() {
       // Write traz o conteudo em `content`; Edit, em `new_string`.
       if (!verdict.blocked)
         verdict = classifyConclusion(ti.file_path, ti.content ?? ti.new_string);
+      if (!verdict.blocked)
+        verdict = classifySelfContainment(ti.file_path, ti.content ?? ti.new_string);
       if (!verdict.blocked) verdict = classifyStrayFile(ti.file_path);
     } else {
       // fallback: varre o JSON inteiro por padrao de comando destrutivo

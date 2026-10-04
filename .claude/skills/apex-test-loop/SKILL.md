@@ -54,7 +54,16 @@ Mapeie **todos** os cenários da classe (por método: happy path, ramos, exceç�
 e preencha o `## Inventário de cenários` do checkpoint. **Autore a classe de teste
 cobrindo TODOS eles antes de deployar** — marque `[x]` quando o teste do cenário estiver
 escrito (não quando passar). Só deploye com o inventário esgotado. Isso impede o
-drip-feed (deploy prematuro), crítico com modelos menores.
+drip-feed (deploy prematuro), crítico com modelos menores. Ao mapear, mire o **mínimo
+viável**: só o que bate ≥99% — nenhum cenário extra "por completude" (`loop-rules.md`
+regra 8).
+
+**Antes do 1º deploy, confirme autocontenção (`loop-rules.md` regra 7):** nenhum método
+depende de um artefato de configuração da org por nome literal (RecordType/Profile/
+PermissionSet/Queue/Group/UserRole/BusinessHours/Organization) nem de outra classe
+`*Test` — cada método cria os próprios dados. É exatamente o vetor de uma falha real:
+cobertura ≥99% localmente, mas o deploy para PRODUÇÃO caiu porque a classe de teste
+consultava um artefato que não existia naquele ambiente.
 
 ## O loop (uma iteração)
 
@@ -159,9 +168,11 @@ de `loop-rules.md` continuam valendo — o guiado muda a **comunicação**, não
 Regras completas em `references/loop-rules.md`. Resumo: nunca editar/apagar/mover a classe
 de produção; nunca rodar comando destrutivo; nunca concluir sem o critério objetivo dos
 dois portões; nunca abaixar a meta de 99% sem decisão explícita do humano; nunca gravar
-`concluido` sem `portao_2_deploy_validate: confirmado`. Reforçado por `settings.json`
-(`permissions.deny`) e `scripts/guard.mjs` (hook `PreToolUse`), independente do que você
-decidir.
+`concluido` sem `portao_2_deploy_validate: confirmado`; nunca escrever uma classe de teste
+que dependa de um artefato de configuração da org por nome literal ou de outra classe
+`*Test`; nunca cobrir mais cenário do que o mínimo para bater a meta. Reforçado por
+`settings.json` (`permissions.deny`) e `scripts/guard.mjs` (hook `PreToolUse`), independente
+do que você decidir.
 
 ## Referências
 
