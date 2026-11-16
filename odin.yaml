@@ -5,17 +5,26 @@ dominio: salesforce
 dono: mantenedor
 descricao: Classes de teste Apex. Leva uma classe a 99 por cento de cobertura com todos os testes passando, em ciclos de gerar, rodar e corrigir.
 intencoes:
-  - criar a classe de teste do CaseRouter
-  - aumentar a cobertura de teste desta classe Apex
-  - chegar a 99% de cobertura para o deploy
-  - escrever testes unitários Apex para o serviço
-  - a cobertura está baixa e o deploy foi barrado
-  - gerar test class com mock de callout
-  - cobrir a trigger com testes
-  - texto: testar a tela da jornada na sandbox
-    negativa: true
-  - texto: por que este teste está falhando
-    negativa: true
+  - "criar a classe de teste do CaseRouter"
+  - "aumentar a cobertura de teste desta classe Apex"
+  - "chegar a 99% de cobertura para o deploy"
+  - "escrever testes unitários Apex para o serviço"
+  - "a cobertura está baixa e o deploy foi barrado"
+  - "gerar test class com mock de callout"
+  - "cobrir a trigger com testes"
+  - "qual a cobertura atual dessa classe"
+  - "faz os testes passarem e sobe a cobertura"
+  - "cria o test data factory da capacidade"
+  - "cobre os ramos que faltam no teste"
+  - "gera o mock de HttpCallout para o teste"
+  - "o deploy exige 75% de cobertura e estamos abaixo"
+  - "roda os testes e corrige os que falham"
+  - "escreve testes para a classe de serviço"
+  - "deixa a cobertura da capacidade acima de 90%"
+  - { texto: "testar a tela da jornada na sandbox", negativa: true }
+  - { texto: "por que este teste está falhando em produção", negativa: true }
+  - { texto: "criar a spec da jornada", negativa: true }
+  - { texto: "implementar a capacidade completa", negativa: true }
 perfis_sugeridos:
   - dev
 proximo:
