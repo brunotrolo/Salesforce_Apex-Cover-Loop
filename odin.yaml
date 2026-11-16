@@ -1,0 +1,35 @@
+# Contrato da skill no Odin (schemas/odin.schema.json). Mantido neste repositório; o catálogo só lê.
+id: sf-apex-cover-loop
+nome: Apex Cover Loop
+dominio: salesforce
+dono: mantenedor
+descricao: Classes de teste Apex. Leva uma classe a 99 por cento de cobertura com todos os testes passando, em ciclos de gerar, rodar e corrigir.
+intencoes:
+  - criar a classe de teste do CaseRouter
+  - aumentar a cobertura de teste desta classe Apex
+  - chegar a 99% de cobertura para o deploy
+  - escrever testes unitários Apex para o serviço
+  - a cobertura está baixa e o deploy foi barrado
+  - gerar test class com mock de callout
+  - cobrir a trigger com testes
+  - texto: testar a tela da jornada na sandbox
+    negativa: true
+  - texto: por que este teste está falhando
+    negativa: true
+perfis_sugeridos:
+  - dev
+proximo:
+  - sf-test
+skills:
+  - path: .claude/skills/apex-test-loop/SKILL.md
+agentes:
+  - .claude/agents/coverage-verifier.md
+regras:
+  - .claude/rules/karpathy-guidelines.md
+avaliacoes: evals/
+runtime:
+  dir: .claude/skills/apex-test-loop/scripts
+  node: ">=20"
+  prerequisitos:
+    - node
+    - git

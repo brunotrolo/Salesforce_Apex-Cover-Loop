@@ -20,6 +20,9 @@ description: >-
   ou testes Jest/LWC.
 ---
 
+> **Primeiro passo (Odin):** rode `odin ensure sf-apex-cover-loop` e só continue se a resposta tiver `"ok": true`.
+
+
 # Apex Test Loop — loop de cobertura de contexto único
 
 **VOCÊ conduz o loop inteiro, sozinho, num único contexto.** Não há subagentes: você
