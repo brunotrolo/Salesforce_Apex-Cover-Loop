@@ -201,3 +201,7 @@ do que você decidir.
 | Autorar/refatorar produção (fora do loop) | `platform-apex-generate` |
 | Criar objeto `__c` faltante (scaffold) | `platform-custom-object-generate` |
 | Criar campo `__c`/`__mdt` faltante (scaffold) | `platform-custom-field-generate` |
+
+## Conteúdo de referência da Salesforce (entregue com a skill)
+O craft oficial que o loop consulta vem junto com a skill. Leia sob demanda:
+`.claude/skills/platform-apex-test-generate/SKILL.md` (classe de teste), `.claude/skills/platform-apex-test-run/SKILL.md` (rodar e cobertura), `.claude/skills/platform-apex-logs-debug/SKILL.md` (falha por log), `.claude/skills/platform-data-manage/SKILL.md` (dados de teste) e `.claude/skills/platform-apex-generate/SKILL.md` (produção, fora do loop).

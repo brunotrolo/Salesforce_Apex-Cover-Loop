@@ -39,3 +39,6 @@ Estas 7 são o **craft** (como escrever/rodar teste, criar dados, objetos e camp
 A nossa `apex-test-loop/` é a **orquestração**: o agent loop de cobertura (repetir até
 >= 99%), as travas de segurança, o modo guiado em PT e o modo scaffold — delegando o
 craft a estas skills oficiais. Veja `apex-test-loop/SKILL.md`.
+
+
+> Atualizado em 16/11/2026 para a versão canônica da `lib-salesforce-oficial` 1.1.0 do Odin (uma só versão em todas as skills). A fonte é `libs/` no repositório do Odin.
