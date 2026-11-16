@@ -35,6 +35,8 @@ agentes:
   - .claude/agents/coverage-verifier.md
 regras:
   - .claude/rules/karpathy-guidelines.md
+politicas:
+  - sf-apex-cover-loop
 avaliacoes: evals/
 runtime:
   dir: .claude/skills/apex-test-loop/scripts
